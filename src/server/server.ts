@@ -22,15 +22,7 @@ export async function startServer(agentScopeDir: string, port: number = 4317): P
     origin: true
   });
 
-  // Serve static files (dashboard UI)
-  const publicPath = join(__dirname, '../public');
-  if (existsSync(publicPath)) {
-    await fastify.register(staticPlugin, {
-      root: publicPath,
-      prefix: '/'
-    });
-  }
-
+  // Register API routes BEFORE static files
   // Health check endpoint
   fastify.get('/health', async () => {
     return { status: 'ok' };
@@ -104,6 +96,33 @@ export async function startServer(agentScopeDir: string, port: number = 4317): P
       }
     };
   });
+
+  // Serve static files and SPA
+  const publicPath = join(__dirname, '../public');
+  if (existsSync(publicPath)) {
+    // Register root route FIRST
+    fastify.get('/', async (_request, reply) => {
+      reply.type('text/html');
+      return reply.sendFile('index.html');
+    });
+
+    // Then register static plugin
+    await fastify.register(staticPlugin, {
+      root: publicPath,
+      decorateReply: false
+    });
+
+    // SPA fallback for client-side routing
+    fastify.setNotFoundHandler(async (_request, reply) => {
+      // If it looks like an API route or file request, return 404
+      if (_request.url.startsWith('/api/') || _request.url.includes('.')) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+      // Otherwise serve index.html for SPA routing
+      reply.type('text/html');
+      return reply.sendFile('index.html');
+    });
+  }
 
   // Start server
   try {
