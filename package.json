@@ -16,7 +16,7 @@
     "build": "tsc && cd dashboard && npm run build",
     "build:core": "tsc",
     "build:dashboard": "cd dashboard && npm run build",
-    "test": "vitest",
+    "test": "vitest --run",
     "test:coverage": "vitest --coverage",
     "prepublishOnly": "npm run build && npm test"
   },
