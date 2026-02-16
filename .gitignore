@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.next/
+dashboard/node_modules/
+dashboard/.next/
+coverage/
+.vitest-cache/
+*.log
+.agent-scope/
+.DS_Store
+.env
