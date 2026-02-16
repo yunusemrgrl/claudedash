@@ -1,0 +1,33 @@
+# Development files
+brief.md
+*.log
+.DS_Store
+
+# Test files
+tests/
+coverage/
+.vitest-cache/
+
+# Source files (only publish dist)
+src/
+tsconfig.json
+vitest.config.ts
+
+# Dashboard source (only publish built files in dist/public)
+dashboard/src/
+dashboard/node_modules/
+dashboard/.next/
+dashboard/next-env.d.ts
+dashboard/package-lock.json
+dashboard/tsconfig.json
+dashboard/tailwind.config.ts
+dashboard/postcss.config.mjs
+dashboard/next.config.mjs
+
+# Git files
+.git/
+.gitignore
+
+# Runtime directories
+.agent-scope/
+node_modules/

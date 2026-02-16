@@ -4,23 +4,42 @@
   "description": "Deterministic, local, passive execution observer for AI agent workflows",
   "type": "module",
   "bin": {
-    "agent-scope": "./dist/cli.js"
+    "agent-scope": "dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx watch src/cli.ts start",
     "build": "tsc && cd dashboard && npm run build",
     "build:core": "tsc",
     "build:dashboard": "cd dashboard && npm run build",
     "test": "vitest",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "agent",
     "observer",
     "workflow",
-    "ai"
+    "ai",
+    "monitoring",
+    "task-tracking",
+    "ai-agents",
+    "execution-observer",
+    "workflow-management"
   ],
-  "author": "",
+  "author": "Yunus Emre Gurlu <yunusemregurlu@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/agent-scope.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/agent-scope/issues"
+  },
+  "homepage": "https://github.com/yourusername/agent-scope#readme",
   "license": "MIT",
   "dependencies": {
     "@fastify/cors": "^9.0.1",
