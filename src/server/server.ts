@@ -100,26 +100,24 @@ export async function startServer(agentScopeDir: string, port: number = 4317): P
   // Serve static files and SPA
   const publicPath = join(__dirname, '../public');
   if (existsSync(publicPath)) {
-    // Register root route FIRST
-    fastify.get('/', async (_request, reply) => {
-      reply.type('text/html');
-      return reply.sendFile('index.html');
-    });
-
-    // Then register static plugin
+    // Register static plugin first (this adds sendFile to reply)
     await fastify.register(staticPlugin, {
       root: publicPath,
-      decorateReply: false
+      prefix: '/'
+    });
+
+    // Override root route to serve index.html
+    fastify.get('/', async (_request, reply) => {
+      return reply.sendFile('index.html');
     });
 
     // SPA fallback for client-side routing
     fastify.setNotFoundHandler(async (_request, reply) => {
       // If it looks like an API route or file request, return 404
-      if (_request.url.startsWith('/api/') || _request.url.includes('.')) {
+      if (_request.url.startsWith('/api/') || _request.url.match(/\.\w+$/)) {
         return reply.code(404).send({ error: 'Not found' });
       }
       // Otherwise serve index.html for SPA routing
-      reply.type('text/html');
       return reply.sendFile('index.html');
     });
   }
