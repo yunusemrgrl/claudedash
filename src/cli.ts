@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('agent-scope')
   .description('Deterministic, local, passive execution observer for AI agent workflows')
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('init')
@@ -116,43 +116,54 @@ Run \`npx agent-scope start\` to view the dashboard.
 program
   .command('start')
   .description('Start the agent-scope server and dashboard')
-  .action(async () => {
+  .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
+  .option('-p, --port <number>', 'Port number', '4317')
+  .action(async (opts) => {
+    const claudeDir = opts.claudeDir;
     const agentScopeDir = join(process.cwd(), '.agent-scope');
 
-    // Verify .agent-scope/ exists
-    if (!existsSync(agentScopeDir)) {
-      console.error('❌ .agent-scope/ not found. Run "agent-scope init" first.');
+    // Detect available modes
+    const hasLive = existsSync(join(claudeDir, 'tasks'));
+    const hasPlan = existsSync(agentScopeDir);
+
+    if (!hasLive && !hasPlan) {
+      console.error('❌ No data sources found.');
+      console.error(`   Live mode: ${claudeDir}/tasks/ not found`);
+      console.error('   Plan mode: .agent-scope/ not found (run "agent-scope init")');
       process.exit(1);
     }
 
-    // Read config
-    const configPath = join(agentScopeDir, 'config.json');
-    if (!existsSync(configPath)) {
-      console.error('❌ config.json not found in .agent-scope/');
-      process.exit(1);
+    // Read port from config if plan mode available, otherwise use CLI option
+    let port = parseInt(opts.port, 10);
+    if (hasPlan) {
+      const configPath = join(agentScopeDir, 'config.json');
+      if (existsSync(configPath)) {
+        try {
+          const configContent = await import('fs').then(fs =>
+            fs.promises.readFile(configPath, 'utf-8')
+          );
+          const config = JSON.parse(configContent);
+          if (config.port && opts.port === '4317') {
+            port = config.port;
+          }
+        } catch { /* use default port */ }
+      }
     }
 
-    let config: { port: number };
-    try {
-      const configContent = await import('fs').then(fs =>
-        fs.promises.readFile(configPath, 'utf-8')
-      );
-      config = JSON.parse(configContent);
-    } catch (error) {
-      console.error('❌ Failed to read config.json:', error);
-      process.exit(1);
-    }
-
-    const port = config.port || 4317;
     const url = `http://localhost:${port}`;
 
     try {
-      // Start server
-      await startServer(agentScopeDir, port);
+      await startServer({
+        claudeDir,
+        port,
+        agentScopeDir: hasPlan ? agentScopeDir : undefined
+      });
+
       console.log(`✓ Server running on ${url}`);
+      if (hasLive) console.log(`  Live mode: watching ${claudeDir}/tasks/`);
+      if (hasPlan) console.log('  Plan mode: reading .agent-scope/');
       console.log('✓ Opening browser...');
 
-      // Auto-open browser
       const platform = process.platform;
       const openCommand = platform === 'darwin' ? 'open' :
                          platform === 'win32' ? 'start' :

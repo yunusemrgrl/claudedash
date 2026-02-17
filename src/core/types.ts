@@ -1,5 +1,25 @@
 export type TaskStatus = "READY" | "BLOCKED" | "DONE" | "FAILED";
 
+// Live mode types (Claude Code TodoWrite)
+export type ClaudeTaskStatus = "pending" | "in_progress" | "completed";
+
+export interface ClaudeTask {
+  id: string;
+  subject: string;
+  description: string;
+  activeForm: string;
+  status: ClaudeTaskStatus;
+  blocks: string[];
+  blockedBy: string[];
+}
+
+export interface ClaudeSession {
+  id: string;
+  tasks: ClaudeTask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Task {
   id: string;             // S1-T1
   slice: string;          // S1

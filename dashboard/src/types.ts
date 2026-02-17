@@ -1,3 +1,4 @@
+// Plan mode types (queue.md)
 export type TaskStatus = "READY" | "BLOCKED" | "DONE" | "FAILED";
 
 export interface Task {
@@ -11,9 +12,10 @@ export interface Task {
 
 export interface LogEvent {
   task_id: string;
-  status: "DONE" | "FAILED";
+  status: "DONE" | "FAILED" | "BLOCKED";
   timestamp: string;
   agent: string;
+  reason?: string;
   meta?: Record<string, unknown>;
 }
 
@@ -49,5 +51,37 @@ export interface SnapshotResponse {
   meta: {
     generatedAt: string;
     totalTasks: number;
+  };
+}
+
+// Live mode types (Claude Code TodoWrite)
+export type ClaudeTaskStatus = "pending" | "in_progress" | "completed";
+
+export interface ClaudeTask {
+  id: string;
+  subject: string;
+  description: string;
+  activeForm: string;
+  status: ClaudeTaskStatus;
+  blocks: string[];
+  blockedBy: string[];
+}
+
+export interface ClaudeSession {
+  id: string;
+  tasks: ClaudeTask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionsResponse {
+  sessions: ClaudeSession[];
+}
+
+export interface HealthResponse {
+  status: string;
+  modes: {
+    live: boolean;
+    plan: boolean;
   };
 }
