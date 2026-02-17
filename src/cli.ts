@@ -27,19 +27,31 @@ program
 
     try {
       mkdirSync(agentScopeDir);
-      console.log('✓ Created .agent-scope/ folder');
+      console.log('✓ Created .agent-scope/');
 
-      // Create queue.md template
+      // Create queue.md with realistic example
       const queueTemplate = `# Slice S1
 
 ## S1-T1
-Area: Core
+Area: Setup
 Depends: -
-Description: First task
-AC: Task completed successfully
+Description: Initialize project structure and install dependencies
+AC: Project builds and all linters pass
+
+## S1-T2
+Area: Core
+Depends: S1-T1
+Description: Implement core feature
+AC: Feature works end-to-end with happy path
+
+## S1-T3
+Area: Test
+Depends: S1-T1, S1-T2
+Description: Add integration tests for core feature
+AC: All tests pass, edge cases covered
 `;
       writeFileSync(join(agentScopeDir, 'queue.md'), queueTemplate);
-      console.log('✓ Created queue.md template');
+      console.log('✓ Created queue.md');
 
       // Create empty execution.log
       writeFileSync(join(agentScopeDir, 'execution.log'), '');
@@ -52,7 +64,7 @@ AC: Task completed successfully
         port: 4317,
         taskModel: {
           fields: [
-            { name: 'Area', type: 'enum', required: true, values: ['Core'] },
+            { name: 'Area', type: 'enum', required: true, values: ['Setup', 'Core', 'Test'] },
             { name: 'Depends', type: 'refs', required: false },
             { name: 'Description', type: 'text', required: true },
             { name: 'AC', type: 'text', required: true }
@@ -67,46 +79,116 @@ AC: Task completed successfully
       writeFileSync(join(agentScopeDir, 'config.json'), JSON.stringify(config, null, 2));
       console.log('✓ Created config.json');
 
-      // Generate Claude.md snippet
-      const claudeMdSnippet = `
-# Agent Scope Integration
+      // Create workflow.md — autonomous execution protocol
+      const workflowTemplate = `# Agent Workflow
 
-When working on tasks, log your progress to \`.agent-scope/execution.log\`:
+Autonomous execution protocol for agent-scope Plan mode.
+Each task from \`queue.md\` is processed through these phases.
 
-## Log Format (JSONL)
+---
 
-Each completed task should be logged as a single line:
+## Phase 1 — INTAKE
 
+Read the next READY task from \`.agent-scope/queue.md\`.
+
+1. Parse the task: ID, Area, Description, AC, Dependencies.
+2. Verify all dependencies have status DONE in \`execution.log\`.
+3. If dependencies are not met, log BLOCKED and move to next task.
+
+---
+
+## Phase 2 — EXECUTE
+
+Implement the task.
+
+1. Read the task description and acceptance criteria.
+2. Identify affected files using the codebase.
+3. Implement the change. Follow existing conventions.
+4. Run relevant tests/linters to verify.
+
+---
+
+## Phase 3 — LOG
+
+Append result to \`.agent-scope/execution.log\` (one JSON line):
+
+Success:
 \`\`\`json
-{"task_id":"S1-T1","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}
+{"task_id":"S1-T1","status":"DONE","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 \`\`\`
 
-For failures:
-
+Failure:
 \`\`\`json
-{"task_id":"S1-T2","status":"FAILED","timestamp":"2026-02-16T14:33:10Z","agent":"claude","meta":{"reason":"timeout"}}
+{"task_id":"S1-T1","status":"FAILED","timestamp":"2026-01-15T10:30:00Z","agent":"claude","meta":{"reason":"tests failing"}}
 \`\`\`
 
-For blockers (when a task cannot proceed):
-
+Blocked:
 \`\`\`json
-{"task_id":"S1-T3","status":"BLOCKED","reason":"API key missing","timestamp":"2026-02-16T14:35:00Z","agent":"claude"}
+{"task_id":"S1-T1","status":"BLOCKED","reason":"missing API key","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 \`\`\`
 
-## Required Fields
+---
 
-- \`task_id\`: Task identifier from queue.md (e.g., "S1-T1")
-- \`status\`: "DONE", "FAILED", or "BLOCKED"
-- \`timestamp\`: ISO-8601 timestamp (use \`new Date().toISOString()\`)
-- \`agent\`: Your agent name (e.g., "claude")
-- \`reason\`: (Required for BLOCKED) Why the task is blocked
-- \`meta\`: (Optional) Additional context
+## Phase 4 — NEXT
 
-Run \`npx agent-scope start\` to view the dashboard.
+Pick the next READY task and return to Phase 1.
+If no READY tasks remain, stop and report summary.
+
+---
+
+## Rules
+
+1. One task at a time. Finish before starting next.
+2. Always log to execution.log — never skip Phase 3.
+3. If stuck after 2 attempts, log FAILED and move on.
+4. Do not modify queue.md — it is read-only for the agent.
+5. Use \`new Date().toISOString()\` for timestamps.
 `;
+      writeFileSync(join(agentScopeDir, 'workflow.md'), workflowTemplate);
+      console.log('✓ Created workflow.md');
 
-      console.log('✓ Ready to use! Add this to your Claude.md:\n');
-      console.log(claudeMdSnippet);
+      // Create CLAUDE.md snippet file
+      const claudeMdContent = `# Agent Scope Integration
+
+## Task Tracking (MANDATORY)
+
+You MUST use the TodoWrite tool to track your work. This is not optional.
+The user monitors your progress via a live dashboard that reads TodoWrite output.
+
+Rules:
+- At the START of any multi-step task, create a todo list with all steps.
+- Mark each task as \`in_progress\` BEFORE you start working on it.
+- Mark each task as \`completed\` IMMEDIATELY after finishing it.
+- Keep exactly ONE task as \`in_progress\` at any time.
+- Update the todo list as you discover new subtasks.
+
+If you skip TodoWrite, the user cannot see what you are doing.
+
+## Plan Mode (if .agent-scope/queue.md exists)
+
+Follow \`.agent-scope/workflow.md\` for structured task execution.
+Tasks are defined in \`.agent-scope/queue.md\`.
+Log progress to \`.agent-scope/execution.log\`.
+
+Log format (append one JSON line per task):
+\`\`\`json
+{"task_id":"S1-T1","status":"DONE","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
+\`\`\`
+
+Status values: \`DONE\`, \`FAILED\`, \`BLOCKED\` (requires \`reason\` field)
+
+## Dashboard
+
+Run \`npx agent-scope start\` to view progress.
+`;
+      writeFileSync(join(agentScopeDir, 'CLAUDE.md'), claudeMdContent);
+      console.log('✓ Created CLAUDE.md');
+
+      console.log('\n✓ Ready! Next steps:');
+      console.log('  1. Edit .agent-scope/queue.md with your tasks');
+      console.log('  2. Copy .agent-scope/CLAUDE.md contents into your project CLAUDE.md');
+      console.log('  3. Tell your agent: "follow .agent-scope/workflow.md, start with S1-T1"');
+      console.log('  4. Run: npx agent-scope start');
     } catch (error) {
       console.error('❌ Failed to initialize:', error);
       process.exit(1);

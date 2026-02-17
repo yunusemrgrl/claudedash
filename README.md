@@ -23,7 +23,17 @@ That's it. Open `localhost:4317`. Watch your agent work.
 
 ## How it works
 
-Claude Code already writes task state to `~/.claude/tasks/` via TodoWrite. agent-scope reads those files, watches for changes, and streams updates to your browser via SSE. No database. No auth. No cloud. Just files.
+Claude Code writes task state to `~/.claude/tasks/` when it uses the TodoWrite tool. agent-scope reads those files, watches for changes, and streams updates to your browser via SSE. No database. No auth. No cloud. Just files.
+
+**Important:** Claude Code only writes task files when TodoWrite is actively used. To ensure your sessions always appear on the dashboard, add this to your project's `CLAUDE.md`:
+
+```markdown
+You MUST use the TodoWrite tool to track your work.
+At the START of any multi-step task, create a todo list with all steps.
+Mark each task in_progress before starting, completed after finishing.
+```
+
+Or run `agent-scope init` — it generates a ready-to-use `CLAUDE.md` snippet.
 
 ## Two modes
 
@@ -50,13 +60,30 @@ npx agent-scope start
 npm i -g agent-scope
 ```
 
-### Plan mode setup
+### Plan mode
+
+For structured project execution with task dependencies and acceptance criteria.
 
 ```bash
-agent-scope init          # Creates .agent-scope/ with queue.md template
-# Edit .agent-scope/queue.md with your tasks
-agent-scope start
+agent-scope init
 ```
+
+This creates `.agent-scope/` with:
+
+| File | Purpose |
+|---|---|
+| `queue.md` | Your task list — slices, dependencies, AC |
+| `workflow.md` | Execution protocol your agent follows |
+| `execution.log` | Agent logs DONE/FAILED/BLOCKED here |
+| `config.json` | Heading patterns, port, field definitions |
+| `CLAUDE.md` | Paste into your project's CLAUDE.md |
+
+Then:
+
+1. Edit `queue.md` with your actual tasks
+2. Copy `CLAUDE.md` contents into your project's CLAUDE.md
+3. Tell your agent: *"follow .agent-scope/workflow.md, start with S1-T1"*
+4. Run `agent-scope start` and watch the dashboard
 
 ## CLI
 
