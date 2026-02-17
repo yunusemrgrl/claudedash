@@ -55,7 +55,7 @@ export async function startServer(options: ServerOptions): Promise<void> {
 
   // Health check endpoint
   fastify.get('/health', async () => {
-    const hasLive = existsSync(join(claudeDir, 'tasks'));
+    const hasLive = existsSync(join(claudeDir, 'tasks')) || existsSync(join(claudeDir, 'todos'));
     const hasPlan = agentScopeDir ? existsSync(join(agentScopeDir, 'queue.md')) : false;
     return { status: 'ok', modes: { live: hasLive, plan: hasPlan } };
   });

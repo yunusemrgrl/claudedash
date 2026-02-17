@@ -21,10 +21,16 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
   const emitter = new EventEmitter();
   const watchPaths: string[] = [];
 
-  // Watch Claude tasks directory
+  // Watch Claude tasks directory (legacy format)
   const claudeTasksDir = join(options.claudeDir, 'tasks');
   if (existsSync(claudeTasksDir)) {
-    watchPaths.push(join(claudeTasksDir, '**/*.json'));
+    watchPaths.push(claudeTasksDir);
+  }
+
+  // Watch Claude todos directory (current format)
+  const claudeTodosDir = join(options.claudeDir, 'todos');
+  if (existsSync(claudeTodosDir)) {
+    watchPaths.push(claudeTodosDir);
   }
 
   // Watch agent-scope files if configured
