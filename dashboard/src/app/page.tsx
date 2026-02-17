@@ -26,6 +26,7 @@ import type {
   ClaudeTask,
   SessionsResponse,
   HealthResponse,
+  TokenUsage,
 } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -112,7 +113,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (loading) return;
 
-    const es = new EventSource("/events");
+    const es = new EventSource("/events/");
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
@@ -365,6 +366,15 @@ function LiveView({
     );
   };
 
+  const formatTokens = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return String(n);
+  };
+
+  const totalTokens = (u: TokenUsage) =>
+    u.inputTokens + u.outputTokens + u.cacheCreationTokens + u.cacheReadTokens;
+
   const timeAgo = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
@@ -406,10 +416,15 @@ function LiveView({
                       <span className="relative inline-flex rounded-full size-2 bg-chart-2" />
                     </span>
                   )}
-                  <span className="text-xs font-mono text-foreground truncate">
-                    {session.id.slice(0, 8)}
+                  <span className="text-xs font-medium text-foreground truncate">
+                    {session.projectName || session.id.slice(0, 8)}
                   </span>
                 </div>
+                {session.projectName && (
+                  <div className="text-[10px] text-muted-foreground/60 font-mono truncate mb-1">
+                    {session.id.slice(0, 8)}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-muted rounded-full h-1.5">
                     <div
@@ -421,8 +436,13 @@ function LiveView({
                     {session.tasks.filter((t) => t.status === "completed").length}/{session.tasks.length}
                   </span>
                 </div>
-                <div className="text-[10px] text-muted-foreground/60 mt-1">
-                  {timeAgo(session.updatedAt)}
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 mt-1">
+                  <span>{timeAgo(session.updatedAt)}</span>
+                  {session.tokenUsage && (
+                    <span title={`In: ${formatTokens(session.tokenUsage.inputTokens)} | Out: ${formatTokens(session.tokenUsage.outputTokens)} | Cache: ${formatTokens(session.tokenUsage.cacheReadTokens)}`}>
+                      {formatTokens(totalTokens(session.tokenUsage))} tok
+                    </span>
+                  )}
                 </div>
               </button>
             ))}
@@ -433,9 +453,35 @@ function LiveView({
       {/* Kanban Board */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedSession ? (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Token Usage Bar */}
+            {selectedSession.tokenUsage && (
+              <div className="bg-sidebar border-b border-sidebar-border px-4 py-2 flex items-center gap-6 text-xs shrink-0">
+                <span className="text-muted-foreground font-medium">Tokens:</span>
+                <span className="text-foreground">
+                  <span className="text-muted-foreground">In </span>
+                  {formatTokens(selectedSession.tokenUsage.inputTokens)}
+                </span>
+                <span className="text-foreground">
+                  <span className="text-muted-foreground">Out </span>
+                  {formatTokens(selectedSession.tokenUsage.outputTokens)}
+                </span>
+                <span className="text-foreground">
+                  <span className="text-muted-foreground">Cache Write </span>
+                  {formatTokens(selectedSession.tokenUsage.cacheCreationTokens)}
+                </span>
+                <span className="text-foreground">
+                  <span className="text-muted-foreground">Cache Read </span>
+                  {formatTokens(selectedSession.tokenUsage.cacheReadTokens)}
+                </span>
+                <span className="text-muted-foreground/60 ml-auto">
+                  Total: {formatTokens(totalTokens(selectedSession.tokenUsage))}
+                </span>
+              </div>
+            )}
             {/* Kanban Columns */}
-            <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
               <KanbanColumn
                 title="Pending"
                 count={pending.length}
@@ -550,6 +596,7 @@ function LiveView({
                 </ScrollArea>
               </div>
             )}
+            </div>
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">

@@ -67,11 +67,21 @@ export interface ClaudeTask {
   blockedBy: string[];
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+}
+
 export interface ClaudeSession {
   id: string;
   tasks: ClaudeTask[];
   createdAt: string;
   updatedAt: string;
+  projectName?: string;
+  cwd?: string;
+  tokenUsage?: TokenUsage;
 }
 
 export interface SessionsResponse {
