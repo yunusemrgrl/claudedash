@@ -49,7 +49,20 @@ AC: Task completed successfully
       const config = {
         queueFile: 'queue.md',
         logFile: 'execution.log',
-        port: 4317
+        port: 4317,
+        taskModel: {
+          fields: [
+            { name: 'Area', type: 'enum', required: true, values: ['Core'] },
+            { name: 'Depends', type: 'refs', required: false },
+            { name: 'Description', type: 'text', required: true },
+            { name: 'AC', type: 'text', required: true }
+          ],
+          id: '{slice}-T{n}',
+          headings: {
+            slice: '# Slice {name}',
+            task: '## {id}'
+          }
+        }
       };
       writeFileSync(join(agentScopeDir, 'config.json'), JSON.stringify(config, null, 2));
       console.log('✓ Created config.json');
@@ -68,18 +81,25 @@ Each completed task should be logged as a single line:
 {"task_id":"S1-T1","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}
 \`\`\`
 
-Or for failures:
+For failures:
 
 \`\`\`json
 {"task_id":"S1-T2","status":"FAILED","timestamp":"2026-02-16T14:33:10Z","agent":"claude","meta":{"reason":"timeout"}}
 \`\`\`
 
+For blockers (when a task cannot proceed):
+
+\`\`\`json
+{"task_id":"S1-T3","status":"BLOCKED","reason":"API key missing","timestamp":"2026-02-16T14:35:00Z","agent":"claude"}
+\`\`\`
+
 ## Required Fields
 
 - \`task_id\`: Task identifier from queue.md (e.g., "S1-T1")
-- \`status\`: Either "DONE" or "FAILED"
+- \`status\`: "DONE", "FAILED", or "BLOCKED"
 - \`timestamp\`: ISO-8601 timestamp (use \`new Date().toISOString()\`)
 - \`agent\`: Your agent name (e.g., "claude")
+- \`reason\`: (Required for BLOCKED) Why the task is blocked
 - \`meta\`: (Optional) Additional context
 
 Run \`npx agent-scope start\` to view the dashboard.
