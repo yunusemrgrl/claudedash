@@ -11,9 +11,10 @@ export interface Task {
 
 export interface LogEvent {
   task_id: string;
-  status: "DONE" | "FAILED";
+  status: "DONE" | "FAILED" | "BLOCKED";
   timestamp: string;      // ISO-8601
   agent: string;
+  reason?: string;        // Required when status is BLOCKED
   meta?: Record<string, unknown>;
 }
 

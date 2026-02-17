@@ -103,7 +103,7 @@ invalid json here
 
       const result = parseLog(content);
 
-      expect(result.errors).toContain('Line 1: Invalid status (must be DONE or FAILED)');
+      expect(result.errors).toContain('Line 1: Invalid status (must be DONE, FAILED, or BLOCKED)');
     });
 
     it('should report missing timestamp', () => {
@@ -152,6 +152,35 @@ invalid json here
       const result = parseLog(content);
 
       expect(result.errors).toContain('Line 1: Event must be an object');
+    });
+  });
+
+  describe('BLOCKED event validation', () => {
+    it('should parse valid BLOCKED event with reason', () => {
+      const content = `{"task_id":"S1-T1","status":"BLOCKED","reason":"API key missing","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].status).toBe('BLOCKED');
+      expect(result.events[0].reason).toBe('API key missing');
+    });
+
+    it('should reject BLOCKED event without reason', () => {
+      const content = `{"task_id":"S1-T1","status":"BLOCKED","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: reason is required when status is BLOCKED');
+    });
+
+    it('should reject BLOCKED event with empty reason', () => {
+      const content = `{"task_id":"S1-T1","status":"BLOCKED","reason":"","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: reason is required when status is BLOCKED');
     });
   });
 

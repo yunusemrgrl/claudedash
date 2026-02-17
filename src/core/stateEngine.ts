@@ -61,10 +61,15 @@ function computeTaskStatus(
 
   const lastEvent = eventMap.get(task.id);
 
-  // Priority: FAILED > DONE > BLOCKED > READY
+  // Priority: FAILED > BLOCKED(explicit) > DONE > BLOCKED(computed) > READY
   if (lastEvent?.status === 'FAILED') {
     statusCache.set(task.id, 'FAILED');
     return 'FAILED';
+  }
+
+  if (lastEvent?.status === 'BLOCKED') {
+    statusCache.set(task.id, 'BLOCKED');
+    return 'BLOCKED';
   }
 
   if (lastEvent?.status === 'DONE') {

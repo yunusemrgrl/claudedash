@@ -1,5 +1,75 @@
 import type { Task } from './types.js';
 
+export interface QueueParseConfig {
+  id?: string;        // Template: "{slice}-T{n}"
+  headings?: {
+    slice?: string;   // Template: "# Slice {name}"
+    task?: string;    // Template: "## {id}"
+  };
+}
+
+// Placeholder → regex mapping
+const PLACEHOLDER_PATTERNS: Record<string, string> = {
+  '{id}': '(\\S+)',
+  '{name}': '(\\S+)',
+  '{slice}': '(\\S+?)',
+  '{n}': '(\\d+)'
+};
+
+/**
+ * Converts a user-friendly template into a regex string.
+ * "## {id}" → "^##\\s+(\S+)$"
+ * "# Slice {name}" → "^#\\s+Slice\\s+(\S+)$"
+ */
+function templateToRegex(template: string): string {
+  let regex = template;
+
+  // Escape regex special chars except our placeholders
+  regex = regex.replace(/([.+?^${}()|[\]\\])/g, (match) => {
+    // Don't escape if it's part of a placeholder like {id}
+    if (match === '{' || match === '}') return match;
+    return '\\' + match;
+  });
+
+  // Replace placeholders with capture groups
+  for (const [placeholder, pattern] of Object.entries(PLACEHOLDER_PATTERNS)) {
+    regex = regex.replaceAll(placeholder, pattern);
+  }
+
+  // Replace spaces with \s+
+  regex = regex.replace(/\s+/g, '\\s+');
+
+  return '^' + regex + '$';
+}
+
+/**
+ * Builds a slice extractor regex from the id template.
+ * "{slice}-T{n}" → "^(\S+?)-T" (everything before the last known literal)
+ */
+function idTemplateToSliceRegex(idTemplate: string): RegExp {
+  const sliceIdx = idTemplate.indexOf('{slice}');
+  if (sliceIdx === -1) return /^(.+)$/; // No slice in template, use full ID
+
+  // Get the literal text right after {slice}
+  const afterSlice = idTemplate.substring(sliceIdx + '{slice}'.length);
+  // Take the first literal character(s) before the next placeholder
+  const nextPlaceholder = afterSlice.search(/\{/);
+  const separator = nextPlaceholder === -1 ? afterSlice : afterSlice.substring(0, nextPlaceholder);
+
+  if (!separator) return /^(.+)$/;
+
+  const escapedSep = separator.replace(/([.+?^${}()|[\]\\])/g, '\\$1');
+  return new RegExp('^(\\S+?)' + escapedSep);
+}
+
+const DEFAULT_TEMPLATES = {
+  id: '{slice}-T{n}',
+  headings: {
+    slice: '# Slice {name}',
+    task: '## {id}'
+  }
+};
+
 export interface QueueParseResult {
   tasks: Task[];
   errors: string[];
@@ -9,10 +79,18 @@ export interface QueueParseResult {
  * Parses a markdown queue file into structured tasks.
  * Returns both tasks and any validation errors encountered.
  */
-export function parseQueue(content: string): QueueParseResult {
+export function parseQueue(content: string, config?: QueueParseConfig): QueueParseResult {
   const tasks: Task[] = [];
   const errors: string[] = [];
   const lines = content.split('\n');
+
+  const sliceTemplate = config?.headings?.slice ?? DEFAULT_TEMPLATES.headings.slice;
+  const taskTemplate = config?.headings?.task ?? DEFAULT_TEMPLATES.headings.task;
+  const idTemplate = config?.id ?? DEFAULT_TEMPLATES.id;
+
+  const sliceRegex = new RegExp(templateToRegex(sliceTemplate));
+  const taskRegex = new RegExp(templateToRegex(taskTemplate));
+  const sliceFromIdRegex = idTemplateToSliceRegex(idTemplate);
 
   let currentTask: Partial<Task> | null = null;
   let lineNumber = 0;
@@ -21,15 +99,15 @@ export function parseQueue(content: string): QueueParseResult {
     lineNumber++;
     const trimmed = line.trim();
 
-    // Match slice header: # Slice S1
-    const sliceMatch = trimmed.match(/^#\s+Slice\s+(S\d+)$/);
+    // Match slice header
+    const sliceMatch = trimmed.match(sliceRegex);
     if (sliceMatch) {
       // Slice headers are informational only; task IDs contain slice info
       continue;
     }
 
-    // Match task header: ## S1-T1
-    const taskMatch = trimmed.match(/^##\s+(S\d+-T\d+)$/);
+    // Match task header
+    const taskMatch = trimmed.match(taskRegex);
     if (taskMatch) {
       // Save previous task if exists
       if (currentTask) {
@@ -44,7 +122,8 @@ export function parseQueue(content: string): QueueParseResult {
 
       // Start new task
       const taskId = taskMatch[1];
-      const sliceId = taskId.split('-')[0];
+      const sliceMatch2 = taskId.match(sliceFromIdRegex);
+      const sliceId = sliceMatch2 ? sliceMatch2[1] : taskId;
 
       currentTask = {
         id: taskId,

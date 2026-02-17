@@ -74,8 +74,15 @@ function validateLogEvent(obj: unknown, lineNumber: number): { event: LogEvent |
   }
 
   // Validate status
-  if (event.status !== 'DONE' && event.status !== 'FAILED') {
-    errors.push(`Line ${lineNumber}: Invalid status (must be DONE or FAILED)`);
+  if (event.status !== 'DONE' && event.status !== 'FAILED' && event.status !== 'BLOCKED') {
+    errors.push(`Line ${lineNumber}: Invalid status (must be DONE, FAILED, or BLOCKED)`);
+  }
+
+  // Validate reason (required for BLOCKED)
+  if (event.status === 'BLOCKED') {
+    if (typeof event.reason !== 'string' || !event.reason) {
+      errors.push(`Line ${lineNumber}: reason is required when status is BLOCKED`);
+    }
   }
 
   // Validate timestamp
@@ -102,9 +109,10 @@ function validateLogEvent(obj: unknown, lineNumber: number): { event: LogEvent |
   // At this point, all validations passed, so we can safely construct a LogEvent
   const validEvent: LogEvent = {
     task_id: event.task_id as string,
-    status: event.status as "DONE" | "FAILED",
+    status: event.status as "DONE" | "FAILED" | "BLOCKED",
     timestamp: event.timestamp as string,
     agent: event.agent as string,
+    ...(event.reason !== undefined && { reason: event.reason as string }),
     ...(event.meta !== undefined && { meta: event.meta as Record<string, unknown> })
   };
 

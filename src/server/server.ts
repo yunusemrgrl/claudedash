@@ -4,7 +4,7 @@ import staticPlugin from '@fastify/static';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { parseQueue } from '../core/queueParser.js';
+import { parseQueue, type QueueParseConfig } from '../core/queueParser.js';
 import { parseLog } from '../core/logParser.js';
 import { computeSnapshot } from '../core/stateEngine.js';
 import type { Snapshot } from '../core/types.js';
@@ -46,9 +46,24 @@ export async function startServer(agentScopeDir: string, port: number = 4317): P
       };
     }
 
+    // Read config for queue parse patterns
+    const configPath = join(agentScopeDir, 'config.json');
+    let queueParseConfig: QueueParseConfig | undefined;
+    if (existsSync(configPath)) {
+      try {
+        const configData = JSON.parse(readFileSync(configPath, 'utf-8'));
+        if (configData.taskModel) {
+          queueParseConfig = {
+            id: configData.taskModel.id,
+            headings: configData.taskModel.headings
+          };
+        }
+      } catch { /* use defaults */ }
+    }
+
     // Read and parse queue
     const queueContent = readFileSync(queuePath, 'utf-8');
-    const queueResult = parseQueue(queueContent);
+    const queueResult = parseQueue(queueContent, queueParseConfig);
 
     // If queue has errors, don't compute snapshot
     if (queueResult.errors.length > 0) {

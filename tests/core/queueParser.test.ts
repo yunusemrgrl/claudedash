@@ -354,6 +354,74 @@ AC: Works`;
     });
   });
 
+  describe('custom heading patterns', () => {
+    it('should parse with custom templates', () => {
+      const content = `# Sprint Backend
+
+## BE-001
+Area: API
+Depends: -
+Description: Setup REST endpoints
+AC: Endpoints respond
+
+## BE-002
+Area: API
+Depends: BE-001
+Description: Add auth middleware
+AC: Protected routes work`;
+
+      const config = {
+        id: '{slice}-{n}',
+        headings: {
+          slice: '# Sprint {name}',
+          task: '## {id}'
+        }
+      };
+
+      const result = parseQueue(content, config);
+
+      expect(result.errors).toEqual([]);
+      expect(result.tasks).toHaveLength(2);
+      expect(result.tasks[0].id).toBe('BE-001');
+      expect(result.tasks[0].slice).toBe('BE');
+      expect(result.tasks[1].dependsOn).toEqual(['BE-001']);
+    });
+
+    it('should use defaults when no config provided', () => {
+      const content = `# Slice S1
+
+## S1-T1
+Area: Auth
+Depends: -
+Description: Task 1
+AC: Done`;
+
+      const result = parseQueue(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.tasks[0].id).toBe('S1-T1');
+      expect(result.tasks[0].slice).toBe('S1');
+    });
+
+    it('should fallback slice to full ID when id template has no slice', () => {
+      const content = `## STANDALONE
+Area: Core
+Depends: -
+Description: No slice pattern
+AC: Works`;
+
+      const config = {
+        id: '{n}',
+        headings: { task: '## {id}' }
+      };
+
+      const result = parseQueue(content, config);
+
+      expect(result.errors).toEqual([]);
+      expect(result.tasks[0].slice).toBe('STANDALONE');
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle empty content', () => {
       const result = parseQueue('');

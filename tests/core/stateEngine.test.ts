@@ -252,6 +252,98 @@ describe('stateEngine', () => {
     });
   });
 
+  describe('explicit BLOCKED', () => {
+    it('should mark task as BLOCKED when agent explicitly blocks it', () => {
+      const tasks: Task[] = [
+        {
+          id: 'S1-T1',
+          slice: 'S1',
+          area: 'Core',
+          description: 'Task 1',
+          acceptanceCriteria: 'Done',
+          dependsOn: []
+        }
+      ];
+
+      const events: LogEvent[] = [
+        {
+          task_id: 'S1-T1',
+          status: 'BLOCKED',
+          reason: 'API key missing',
+          timestamp: '2026-02-16T14:00:00Z',
+          agent: 'claude'
+        }
+      ];
+
+      const snapshot = computeSnapshot(tasks, events);
+
+      expect(snapshot.tasks[0].status).toBe('BLOCKED');
+      expect(snapshot.tasks[0].lastEvent?.reason).toBe('API key missing');
+    });
+
+    it('should block downstream tasks when parent is explicitly blocked', () => {
+      const tasks: Task[] = [
+        {
+          id: 'S1-T1',
+          slice: 'S1',
+          area: 'Core',
+          description: 'Task 1',
+          acceptanceCriteria: 'Done',
+          dependsOn: []
+        },
+        {
+          id: 'S1-T2',
+          slice: 'S1',
+          area: 'Core',
+          description: 'Task 2',
+          acceptanceCriteria: 'Done',
+          dependsOn: ['S1-T1']
+        }
+      ];
+
+      const events: LogEvent[] = [
+        {
+          task_id: 'S1-T1',
+          status: 'BLOCKED',
+          reason: 'Waiting for external API',
+          timestamp: '2026-02-16T14:00:00Z',
+          agent: 'claude'
+        }
+      ];
+
+      const snapshot = computeSnapshot(tasks, events);
+
+      expect(snapshot.tasks[0].status).toBe('BLOCKED');
+      expect(snapshot.tasks[1].status).toBe('BLOCKED');
+    });
+
+    it('FAILED should take priority over explicit BLOCKED', () => {
+      const tasks: Task[] = [
+        {
+          id: 'S1-T1',
+          slice: 'S1',
+          area: 'Core',
+          description: 'Task 1',
+          acceptanceCriteria: 'Done',
+          dependsOn: []
+        }
+      ];
+
+      const events: LogEvent[] = [
+        {
+          task_id: 'S1-T1',
+          status: 'FAILED',
+          timestamp: '2026-02-16T15:00:00Z',
+          agent: 'claude'
+        }
+      ];
+
+      const snapshot = computeSnapshot(tasks, events);
+
+      expect(snapshot.tasks[0].status).toBe('FAILED');
+    });
+  });
+
   describe('READY tasks', () => {
     it('should mark task as READY when no dependencies and no events', () => {
       const tasks: Task[] = [
