@@ -253,7 +253,7 @@ function initCopyButtons() {
 
     btn.addEventListener('click', async () => {
       const textEl = $(textSel);
-      const ok = await copyText('npx agent-scope start', textEl, 'copied! ✓');
+      const ok = await copyText('npx -y agent-scope@latest start', textEl, 'copied! ✓');
       if (ok) {
         anime({
           targets: btn,
@@ -270,8 +270,8 @@ function initCopyButtons() {
   if (termBtn) {
     termBtn.addEventListener('click', () => {
       const code = [
-        '# Zero-install — run directly with npx',
-        'npx agent-scope start',
+        '# Zero-install — always gets the latest version',
+        'npx -y agent-scope@latest start',
         '',
         '# Or install globally',
         'npm install -g agent-scope',

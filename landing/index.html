@@ -77,7 +77,7 @@
             <div class="hero-ctas" id="hero-ctas">
               <button class="btn-cmd" id="copy-cmd" title="Click to copy">
                 <span class="cmd-dollar">$</span>
-                <span class="cmd-text" id="cmd-text-1">npx agent-scope start</span>
+                <span class="cmd-text" id="cmd-text-1">npx -y agent-scope@latest start</span>
                 <span class="cmd-copy-icon" aria-label="copy">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -97,7 +97,7 @@
 
             <div class="terminal-hint" id="terminal-hint">
               <span class="th-prompt">~</span>
-              <span class="th-cmd">npx agent-scope start</span>
+              <span class="th-cmd">npx -y agent-scope@latest start</span>
               <span class="th-arrow">→</span>
               <a class="th-url" href="http://localhost:4317">localhost:4317</a>
               <span class="th-cursor" id="th-cursor">▋</span>
@@ -365,8 +365,8 @@
                 <span class="term-title">Terminal</span>
                 <button class="term-copy-btn" id="term-copy">copy</button>
               </div>
-              <pre class="term-body"><code><span class="t-comment"># Zero-install — run directly with npx</span>
-<span class="t-prompt">$</span> <span class="t-cmd">npx agent-scope start</span>
+              <pre class="term-body"><code><span class="t-comment"># Zero-install — always gets the latest version</span>
+<span class="t-prompt">$</span> <span class="t-cmd">npx</span> <span class="t-flag">-y</span> <span class="t-arg">agent-scope@latest</span> <span class="t-cmd">start</span>
 
 <span class="t-comment"># Or install globally</span>
 <span class="t-prompt">$</span> <span class="t-pkg">npm</span> <span class="t-cmd">install</span> <span class="t-flag">-g</span> <span class="t-arg">agent-scope</span>
@@ -453,7 +453,7 @@
             <div class="cta-actions">
               <button class="btn-cmd btn-cmd-lg" id="copy-cmd-2" title="Click to copy">
                 <span class="cmd-dollar">$</span>
-                <span class="cmd-text" id="cmd-text-2">npx agent-scope start</span>
+                <span class="cmd-text" id="cmd-text-2">npx -y agent-scope@latest start</span>
                 <span class="cmd-copy-icon" aria-label="copy">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />

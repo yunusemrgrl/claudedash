@@ -15,7 +15,7 @@ You tell Claude Code to refactor your auth system. It says "on it." You wait. Te
 agent-scope fixes that. One command, zero config. It reads Claude Code's own task files and gives you a live Kanban board.
 
 ```bash
-npx agent-scope start
+npx -y agent-scope@latest start
 ```
 
 That's it. Open `localhost:4317`. Watch your agent work.
@@ -54,11 +54,12 @@ Live mode is the default. Plan mode adds dependencies, acceptance criteria, and 
 ## Install
 
 ```bash
-# Run directly
-npx agent-scope start
+# Zero-install, always latest
+npx -y agent-scope@latest start
 
 # Or install globally
 npm i -g agent-scope
+agent-scope start
 ```
 
 ### Plan mode
