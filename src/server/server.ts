@@ -9,6 +9,10 @@ import { parseLog } from '../core/logParser.js';
 import { computeSnapshot } from '../core/stateEngine.js';
 import { computePlanInsights, computeLiveInsights } from '../core/insightsEngine.js';
 import { readSessions } from '../core/todoReader.js';
+import { parseQualityTimeline } from '../core/qualityTimeline.js';
+import { buildContextHealth } from '../core/contextHealth.js';
+import { detectWorktrees, enrichWorktreeStatus } from '../core/worktreeDetector.js';
+import { mapTasksToWorktrees } from '../core/worktreeMapper.js';
 import { createWatcher, type WatchEvent } from './watcher.js';
 import type { Snapshot, InsightsResponse } from '../core/types.js';
 
@@ -95,17 +99,21 @@ export async function startServer(options: ServerOptions): Promise<void> {
 
   // Live mode: List all sessions
   fastify.get('/sessions', async () => {
-    const sessions = readSessions(claudeDir);
+    const sessions = readSessions(claudeDir).map(s => ({
+      ...s,
+      contextHealth: buildContextHealth(s),
+    }));
     return { sessions };
   });
 
   // Live mode: Get tasks for a specific session
   fastify.get<{ Params: { id: string } }>('/sessions/:id', async (request) => {
     const sessions = readSessions(claudeDir);
-    const session = sessions.find(s => s.id === request.params.id);
-    if (!session) {
+    const found = sessions.find(s => s.id === request.params.id);
+    if (!found) {
       return { session: null, error: 'Session not found' };
     }
+    const session = { ...found, contextHealth: buildContextHealth(found) };
     return { session };
   });
 
@@ -249,6 +257,47 @@ export async function startServer(options: ServerOptions): Promise<void> {
     }
 
     return response;
+  });
+
+  // Worktree Observability: list all worktrees with task associations
+  fastify.get('/worktrees', async () => {
+    try {
+      const raw = await detectWorktrees(process.cwd());
+      const enriched = await Promise.all(raw.map(w => enrichWorktreeStatus(w)));
+      const sessions = readSessions(claudeDir);
+      const worktrees = mapTasksToWorktrees(sessions, enriched);
+      return { worktrees };
+    } catch {
+      return { worktrees: [] };
+    }
+  });
+
+  // Quality Gates: timeline endpoint
+  fastify.get<{ Querystring: { sessionId?: string; taskId?: string } }>('/quality-timeline', async (request) => {
+    if (!agentScopeDir) {
+      return { events: [] };
+    }
+
+    const logPath = join(agentScopeDir, 'execution.log');
+    if (!existsSync(logPath)) {
+      return { events: [] };
+    }
+
+    let logContent: string;
+    try {
+      logContent = readFileSync(logPath, 'utf-8');
+    } catch {
+      return { events: [] };
+    }
+
+    let events = parseQualityTimeline(logContent);
+
+    const { taskId } = request.query;
+    if (taskId) {
+      events = events.filter(e => e.taskId === taskId);
+    }
+
+    return { events };
   });
 
   // Claude Code insights report endpoint

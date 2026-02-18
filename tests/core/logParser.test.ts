@@ -243,6 +243,83 @@ invalid json here
     });
   });
 
+  describe('meta.quality field validation', () => {
+    it('should accept valid quality field with all checks', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{"lint":true,"test":true,"typecheck":false}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.events[0].meta).toEqual({ quality: { lint: true, test: true, typecheck: false } });
+    });
+
+    it('should accept quality field with partial checks', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{"lint":true}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.events[0].meta?.quality).toEqual({ lint: true });
+    });
+
+    it('should accept quality field with empty object', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should reject non-boolean lint value', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{"lint":"yes"}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: meta.quality.lint must be a boolean');
+    });
+
+    it('should reject non-boolean typecheck value', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{"typecheck":1}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: meta.quality.typecheck must be a boolean');
+    });
+
+    it('should reject non-boolean test value', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":{"test":null}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: meta.quality.test must be a boolean');
+    });
+
+    it('should reject non-object quality field', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":"all-good"}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: meta.quality must be an object if provided');
+    });
+
+    it('should reject array quality field', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"quality":[]}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toContain('Line 1: meta.quality must be an object if provided');
+    });
+
+    it('should preserve other meta fields alongside quality', () => {
+      const content = `{"task_id":"X","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude","meta":{"duration":42,"quality":{"lint":true}}}`;
+
+      const result = parseLog(content);
+
+      expect(result.errors).toEqual([]);
+      expect(result.events[0].meta).toEqual({ duration: 42, quality: { lint: true } });
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle empty content', () => {
       const result = parseLog('');

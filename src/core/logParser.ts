@@ -99,6 +99,21 @@ function validateLogEvent(obj: unknown, lineNumber: number): { event: LogEvent |
   if (event.meta !== undefined) {
     if (typeof event.meta !== 'object' || event.meta === null || Array.isArray(event.meta)) {
       errors.push(`Line ${lineNumber}: meta must be an object if provided`);
+    } else {
+      const meta = event.meta as Record<string, unknown>;
+      // Validate meta.quality if present
+      if (meta.quality !== undefined) {
+        if (typeof meta.quality !== 'object' || meta.quality === null || Array.isArray(meta.quality)) {
+          errors.push(`Line ${lineNumber}: meta.quality must be an object if provided`);
+        } else {
+          const quality = meta.quality as Record<string, unknown>;
+          for (const key of ['lint', 'typecheck', 'test'] as const) {
+            if (quality[key] !== undefined && typeof quality[key] !== 'boolean') {
+              errors.push(`Line ${lineNumber}: meta.quality.${key} must be a boolean`);
+            }
+          }
+        }
+      }
     }
   }
 
