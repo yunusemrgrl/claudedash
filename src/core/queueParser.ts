@@ -1,11 +1,19 @@
 import type { Task } from './types.js';
 
+export interface FieldDefinition {
+  name: string;       // Field name as it appears in queue.md (e.g. "Area", "Priority")
+  type: 'text' | 'enum' | 'refs';
+  required: boolean;
+  values?: string[];  // For enum type: allowed values
+}
+
 export interface QueueParseConfig {
   id?: string;        // Template: "{slice}-T{n}"
   headings?: {
     slice?: string;   // Template: "# Slice {name}"
     task?: string;    // Template: "## {id}"
   };
+  fields?: FieldDefinition[];
 }
 
 // Placeholder → regex mapping
@@ -70,6 +78,32 @@ const DEFAULT_TEMPLATES = {
   }
 };
 
+const DEFAULT_FIELDS: FieldDefinition[] = [
+  { name: 'Area', type: 'enum', required: true },
+  { name: 'Depends', type: 'refs', required: false },
+  { name: 'Description', type: 'text', required: true },
+  { name: 'AC', type: 'text', required: true },
+];
+
+// Maps config field names to Task property names
+const FIELD_TO_PROP: Record<string, keyof Task> = {
+  'area': 'area',
+  'depends': 'dependsOn',
+  'description': 'description',
+  'ac': 'acceptanceCriteria',
+};
+
+/**
+ * Builds regex matchers for each field definition.
+ * Returns an array of { field, regex } pairs.
+ */
+function buildFieldMatchers(fields: FieldDefinition[]): Array<{ field: FieldDefinition; regex: RegExp }> {
+  return fields.map(field => ({
+    field,
+    regex: new RegExp(`^${field.name}:\\s*(.+)$`)
+  }));
+}
+
 export interface QueueParseResult {
   tasks: Task[];
   errors: string[];
@@ -87,6 +121,8 @@ export function parseQueue(content: string, config?: QueueParseConfig): QueuePar
   const sliceTemplate = config?.headings?.slice ?? DEFAULT_TEMPLATES.headings.slice;
   const taskTemplate = config?.headings?.task ?? DEFAULT_TEMPLATES.headings.task;
   const idTemplate = config?.id ?? DEFAULT_TEMPLATES.id;
+  const fields = config?.fields ?? DEFAULT_FIELDS;
+  const fieldMatchers = buildFieldMatchers(fields);
 
   const sliceRegex = new RegExp(templateToRegex(sliceTemplate));
   const taskRegex = new RegExp(templateToRegex(taskTemplate));
@@ -111,7 +147,7 @@ export function parseQueue(content: string, config?: QueueParseConfig): QueuePar
     if (taskMatch) {
       // Save previous task if exists
       if (currentTask) {
-        const validated = validateTask(currentTask, lineNumber - 1);
+        const validated = validateTask(currentTask, lineNumber - 1, fields);
         if (validated.errors.length > 0) {
           errors.push(...validated.errors);
         }
@@ -135,42 +171,39 @@ export function parseQueue(content: string, config?: QueueParseConfig): QueuePar
       continue;
     }
 
-    // Parse task fields
+    // Parse task fields dynamically from config
     if (currentTask && trimmed) {
-      const areaMatch = trimmed.match(/^Area:\s*(.+)$/);
-      if (areaMatch) {
-        currentTask.area = areaMatch[1].trim();
-        continue;
-      }
+      let matched = false;
+      for (const { field, regex } of fieldMatchers) {
+        const m = trimmed.match(regex);
+        if (!m) continue;
+        matched = true;
 
-      const dependsMatch = trimmed.match(/^Depends:\s*(.+)$/);
-      if (dependsMatch) {
-        const deps = dependsMatch[1].trim();
-        if (deps === '-') {
-          currentTask.dependsOn = [];
+        const value = m[1].trim();
+        const propKey = FIELD_TO_PROP[field.name.toLowerCase()];
+
+        if (field.type === 'refs') {
+          // refs type: comma-separated task IDs, "-" means empty
+          if (propKey === 'dependsOn') {
+            currentTask.dependsOn = value === '-' ? [] : value.split(',').map(d => d.trim()).filter(d => d);
+          }
+        } else if (propKey) {
+          // Known Task property
+          (currentTask as Record<string, unknown>)[propKey] = value;
         } else {
-          currentTask.dependsOn = deps.split(',').map(d => d.trim()).filter(d => d);
+          // Extra field not in Task interface — store in extra
+          if (!currentTask.extra) currentTask.extra = {};
+          currentTask.extra[field.name] = value;
         }
-        continue;
+        break;
       }
-
-      const descMatch = trimmed.match(/^Description:\s*(.+)$/);
-      if (descMatch) {
-        currentTask.description = descMatch[1].trim();
-        continue;
-      }
-
-      const acMatch = trimmed.match(/^AC:\s*(.+)$/);
-      if (acMatch) {
-        currentTask.acceptanceCriteria = acMatch[1].trim();
-        continue;
-      }
+      if (matched) continue;
     }
   }
 
   // Save last task
   if (currentTask) {
-    const validated = validateTask(currentTask, lineNumber);
+    const validated = validateTask(currentTask, lineNumber, fields);
     if (validated.errors.length > 0) {
       errors.push(...validated.errors);
     }
@@ -206,9 +239,9 @@ export function parseQueue(content: string, config?: QueueParseConfig): QueuePar
 }
 
 /**
- * Validates that a task has all required fields.
+ * Validates that a task has all required fields based on field definitions.
  */
-function validateTask(task: Partial<Task>, lineNumber: number): { task: Task | null; errors: string[] } {
+function validateTask(task: Partial<Task>, lineNumber: number, fields: FieldDefinition[]): { task: Task | null; errors: string[] } {
   const errors: string[] = [];
 
   if (!task.id) {
@@ -216,23 +249,33 @@ function validateTask(task: Partial<Task>, lineNumber: number): { task: Task | n
     return { task: null, errors };
   }
 
-  if (!task.area) {
-    errors.push(`Task ${task.id} missing Area field`);
+  for (const field of fields) {
+    if (!field.required) continue;
+
+    const propKey = FIELD_TO_PROP[field.name.toLowerCase()];
+    if (propKey) {
+      const value = (task as Record<string, unknown>)[propKey];
+      if (!value && value !== false && !(Array.isArray(value) && value.length >= 0)) {
+        errors.push(`Task ${task.id} missing ${field.name} field`);
+      }
+    } else {
+      // Extra field — check in task.extra
+      if (!task.extra?.[field.name]) {
+        errors.push(`Task ${task.id} missing ${field.name} field`);
+      }
+    }
   }
 
-  if (!task.description) {
-    errors.push(`Task ${task.id} missing Description field`);
-  }
-
-  if (!task.acceptanceCriteria) {
-    errors.push(`Task ${task.id} missing AC field`);
-  }
-
+  // Ensure dependsOn is at least an empty array if refs field exists
   if (task.dependsOn === undefined) {
-    errors.push(`Task ${task.id} missing Depends field`);
+    const hasRefsField = fields.some(f => f.type === 'refs');
+    if (hasRefsField) {
+      errors.push(`Task ${task.id} missing ${fields.find(f => f.type === 'refs')!.name} field`);
+    } else {
+      task.dependsOn = [];
+    }
   }
 
-  // If any required field is missing, don't return the task
   if (errors.length > 0) {
     return { task: null, errors };
   }

@@ -37,6 +37,7 @@ export interface Task {
   description: string;
   acceptanceCriteria: string;
   dependsOn: string[];
+  extra?: Record<string, string>;
 }
 
 export interface LogEvent {

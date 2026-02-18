@@ -15,22 +15,23 @@ export interface WatchEvent {
 
 /**
  * Creates a file watcher that emits events when task files change.
- * Watches ~/.claude/tasks/ for Live mode and .agent-scope/ for Plan mode.
+ * Watches ~/.claude/tasks/ and ~/.claude/todos/ for Live mode and .agent-scope/ for Plan mode.
+ * Monitors parent directory to detect late-created subdirectories.
  */
 export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; emitter: EventEmitter } {
   const emitter = new EventEmitter();
   const watchPaths: string[] = [];
+  const trackedSessionDirs = new Set<string>();
 
-  // Watch Claude tasks directory (legacy format)
   const claudeTasksDir = join(options.claudeDir, 'tasks');
-  if (existsSync(claudeTasksDir)) {
-    watchPaths.push(claudeTasksDir);
-  }
-
-  // Watch Claude todos directory (current format)
   const claudeTodosDir = join(options.claudeDir, 'todos');
-  if (existsSync(claudeTodosDir)) {
-    watchPaths.push(claudeTodosDir);
+
+  // Add existing session directories
+  for (const dir of [claudeTasksDir, claudeTodosDir]) {
+    if (existsSync(dir)) {
+      watchPaths.push(dir);
+      trackedSessionDirs.add(dir);
+    }
   }
 
   // Watch agent-scope files if configured
@@ -41,8 +42,12 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
     if (existsSync(logPath)) watchPaths.push(logPath);
   }
 
+  // Always watch the parent claude dir to detect late-created tasks/ and todos/
+  if (existsSync(options.claudeDir)) {
+    watchPaths.push(options.claudeDir);
+  }
+
   if (watchPaths.length === 0) {
-    // Nothing to watch, return a no-op watcher
     const noopWatcher = watch([], { persistent: false });
     return { watcher: noopWatcher, emitter };
   }
@@ -53,6 +58,7 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
   const watcher = watch(watchPaths, {
     persistent: true,
     ignoreInitial: true,
+    depth: 2,
     awaitWriteFinish: {
       stabilityThreshold: 100,
       pollInterval: 50
@@ -60,9 +66,8 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
   });
 
   const emitDebounced = (eventType: WatchEvent['type']) => {
-    // If we already have a pending event, merge (prefer 'sessions' if mixed)
     if (pendingEventType && pendingEventType !== eventType) {
-      pendingEventType = 'sessions'; // both changed, prioritize sessions
+      pendingEventType = 'sessions';
     } else {
       pendingEventType = eventType;
     }
@@ -81,19 +86,34 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
     }, 100);
   };
 
+  const classifyEvent = (path: string): WatchEvent['type'] => {
+    return path.includes('.agent-scope') ? 'plan' : 'sessions';
+  };
+
+  // Detect late-created directories and start watching them
+  const maybeTrackNewDir = (path: string) => {
+    for (const dir of [claudeTasksDir, claudeTodosDir]) {
+      if (path === dir && !trackedSessionDirs.has(dir) && existsSync(dir)) {
+        watcher.add(dir);
+        trackedSessionDirs.add(dir);
+      }
+    }
+  };
+
+  watcher.on('addDir', (path: string) => {
+    maybeTrackNewDir(path);
+  });
+
   watcher.on('change', (path: string) => {
-    const eventType = path.includes('.agent-scope') ? 'plan' : 'sessions';
-    emitDebounced(eventType);
+    emitDebounced(classifyEvent(path));
   });
 
   watcher.on('add', (path: string) => {
-    const eventType = path.includes('.agent-scope') ? 'plan' : 'sessions';
-    emitDebounced(eventType);
+    emitDebounced(classifyEvent(path));
   });
 
   watcher.on('unlink', (path: string) => {
-    const eventType = path.includes('.agent-scope') ? 'plan' : 'sessions';
-    emitDebounced(eventType);
+    emitDebounced(classifyEvent(path));
   });
 
   return { watcher, emitter };

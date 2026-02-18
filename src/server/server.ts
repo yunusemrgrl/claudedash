@@ -140,7 +140,8 @@ export async function startServer(options: ServerOptions): Promise<void> {
         if (configData.taskModel) {
           queueParseConfig = {
             id: configData.taskModel.id,
-            headings: configData.taskModel.headings
+            headings: configData.taskModel.headings,
+            fields: configData.taskModel.fields
           };
         }
       } catch { /* use defaults */ }

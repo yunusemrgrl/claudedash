@@ -110,26 +110,31 @@ export default function Dashboard() {
       });
   }, []);
 
-  // Fetch sessions (Live mode)
+  // Ref to track selected session ID without causing re-renders of fetchSessions
+  const selectedSessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedSessionIdRef.current = selectedSession?.id ?? null;
+  }, [selectedSession]);
+
+  // Fetch sessions (Live mode) — no dependency on selectedSession
   const fetchSessions = useCallback(async () => {
     try {
       const response = await fetch("/sessions");
       if (!response.ok) throw new Error("Failed to fetch sessions");
       const result: SessionsResponse = await response.json();
       setSessions(result.sessions);
-      // Auto-select first session if none selected
-      if (!selectedSession && result.sessions.length > 0) {
+
+      const currentId = selectedSessionIdRef.current;
+      if (!currentId && result.sessions.length > 0) {
         setSelectedSession(result.sessions[0]);
-      }
-      // Update selected session data if it exists
-      if (selectedSession) {
-        const updated = result.sessions.find((s) => s.id === selectedSession.id);
+      } else if (currentId) {
+        const updated = result.sessions.find((s) => s.id === currentId);
         if (updated) setSelectedSession(updated);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     }
-  }, [selectedSession]);
+  }, []);
 
   // Fetch snapshot (Plan mode)
   const fetchSnapshot = useCallback(async () => {
@@ -157,7 +162,15 @@ export default function Dashboard() {
     if (mode === "plan" && availableModes.plan) fetchSnapshot();
   }, [mode, loading, availableModes]);
 
-  // SSE connection for real-time updates
+  // Refs for latest fetch functions and mode — SSE handler uses these to avoid stale closures
+  const fetchSessionsRef = useRef(fetchSessions);
+  const fetchSnapshotRef = useRef(fetchSnapshot);
+  const modeRef = useRef(mode);
+  useEffect(() => { fetchSessionsRef.current = fetchSessions; }, [fetchSessions]);
+  useEffect(() => { fetchSnapshotRef.current = fetchSnapshot; }, [fetchSnapshot]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  // SSE connection — opens once on mount, never reconnects due to state changes
   useEffect(() => {
     if (loading) return;
 
@@ -167,8 +180,8 @@ export default function Dashboard() {
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "sessions" && mode === "live") fetchSessions();
-        if (data.type === "plan" && mode === "plan") fetchSnapshot();
+        if (data.type === "sessions" && modeRef.current === "live") fetchSessionsRef.current();
+        if (data.type === "plan" && modeRef.current === "plan") fetchSnapshotRef.current();
       } catch { /* ignore parse errors */ }
     };
 
@@ -180,7 +193,7 @@ export default function Dashboard() {
       es.close();
       eventSourceRef.current = null;
     };
-  }, [loading, mode, fetchSessions, fetchSnapshot]);
+  }, [loading]);
 
   const handleCopyTaskId = (id: string) => {
     navigator.clipboard.writeText(id);
