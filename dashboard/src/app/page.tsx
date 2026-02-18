@@ -32,6 +32,47 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ViewMode = "live" | "plan";
 
+function TypingPrompt({ lines }: { lines: string[] }) {
+  const [lineIndex, setLineIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentLine = lines[lineIndex];
+
+    if (!isDeleting && charIndex < currentLine.length) {
+      const timeout = setTimeout(() => setCharIndex((c) => c + 1), 40 + Math.random() * 30);
+      return () => clearTimeout(timeout);
+    }
+
+    if (!isDeleting && charIndex === currentLine.length) {
+      const timeout = setTimeout(() => setIsDeleting(true), 2000);
+      return () => clearTimeout(timeout);
+    }
+
+    if (isDeleting && charIndex > 0) {
+      const timeout = setTimeout(() => setCharIndex((c) => c - 1), 20);
+      return () => clearTimeout(timeout);
+    }
+
+    if (isDeleting && charIndex === 0) {
+      setIsDeleting(false);
+      setLineIndex((i) => (i + 1) % lines.length);
+    }
+  }, [charIndex, isDeleting, lineIndex, lines]);
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="text-muted-foreground/30 text-4xl font-bold select-none">&gt;_</div>
+      <div className="h-8 flex items-center">
+        <span className="text-sm text-muted-foreground/60 typing-cursor pr-1">
+          {lines[lineIndex].slice(0, charIndex)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [mode, setMode] = useState<ViewMode>("live");
   const [availableModes, setAvailableModes] = useState({ live: false, plan: false });
@@ -97,6 +138,13 @@ export default function Dashboard() {
       if (!response.ok) throw new Error("Failed to fetch snapshot");
       const result: SnapshotResponse = await response.json();
       setPlanData(result);
+      // Auto-expand all slices on first load
+      if (result.snapshot) {
+        setExpandedSlices((prev) => {
+          if (prev.size > 0) return prev;
+          return new Set(Object.keys(result.snapshot!.slices));
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     }
@@ -333,13 +381,14 @@ function LiveView({
   if (sessions.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Bot className="size-12 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg mb-2">No sessions found</p>
-          <p className="text-muted-foreground/60 text-sm">
-            Start a Claude Code session to see tasks here
-          </p>
-        </div>
+        <TypingPrompt
+          lines={[
+            "Start a Claude Code session to see tasks here",
+            "npx agent-scope start  →  launch dashboard",
+            "Agent uses TodoWrite to track progress",
+            "Sessions appear here in real-time",
+          ]}
+        />
       </div>
     );
   }
@@ -1080,10 +1129,15 @@ function PlanView({
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <p className="text-muted-foreground text-lg mb-2">No task selected</p>
-              <p className="text-muted-foreground/60 text-sm">Select a task from the sidebar to view details</p>
-            </div>
+            <TypingPrompt
+              lines={[
+                "Select a task from the sidebar to view details",
+                "agent-scope init  →  create .agent-scope/",
+                "Define tasks in queue.md with dependencies",
+                "Agent logs progress to execution.log",
+                "Watch your workflow unfold in real-time",
+              ]}
+            />
           </div>
         )}
       </div>

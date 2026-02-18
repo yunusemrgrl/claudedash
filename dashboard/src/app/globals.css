@@ -116,3 +116,14 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* Typing cursor animation */
+@keyframes blink-caret {
+  0%, 100% { border-color: transparent; }
+  50% { border-color: var(--muted-foreground); }
+}
+
+.typing-cursor {
+  border-right: 2px solid var(--muted-foreground);
+  animation: blink-caret 0.8s step-end infinite;
+}
