@@ -28,6 +28,7 @@ export interface ClaudeSession {
   projectName?: string;
   cwd?: string;
   tokenUsage?: TokenUsage;
+  contextHealth?: ContextHealth | null;
 }
 
 export interface Task {
@@ -143,4 +144,45 @@ export interface InsightsResponse {
   live?: LiveInsights;
   plan?: PlanInsights;
   generatedAt: string;
+}
+
+// Quality Gates types
+export interface QualityChecks {
+  lint?: boolean;
+  typecheck?: boolean;
+  test?: boolean;
+}
+
+export interface QualityEvent {
+  timestamp: string;      // ISO-8601
+  file: string;           // File path that was checked
+  checks: QualityChecks;  // Results of quality checks
+  taskId?: string;        // Associated task ID
+  sessionId?: string;     // Associated session ID
+}
+
+// Context Health types
+export type ContextWarningLevel = 'safe' | 'warn' | 'critical';
+
+export interface ContextHealth {
+  percentage: number;              // 0-100, estimated context usage
+  warningLevel: ContextWarningLevel; // safe: <65%, warn: 65-74%, critical: 75%+
+  tokensUsed: number;              // Current tokens in context
+  maxTokens?: number;              // Max tokens if known
+  estimationMethod?: string;       // How percentage was calculated
+}
+
+// Worktree Observability types
+export interface WorktreeState {
+  path: string;           // Absolute path to worktree
+  branch: string;         // Current branch name
+  head: string;           // Commit SHA
+  dirty: boolean;         // Has uncommitted changes
+  aheadCount: number;     // Commits ahead of upstream
+  behindCount: number;    // Commits behind upstream
+  associatedTasks?: Array<{
+    sessionId: string;
+    taskId: string;
+    taskSubject: string;
+  }>;
 }

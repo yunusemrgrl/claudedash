@@ -82,6 +82,7 @@ export interface ClaudeSession {
   projectName?: string;
   cwd?: string;
   tokenUsage?: TokenUsage;
+  contextHealth?: ContextHealth | null;
 }
 
 export interface SessionsResponse {
@@ -165,4 +166,51 @@ export interface InsightsResponse {
   live?: LiveInsights;
   plan?: PlanInsights;
   generatedAt: string;
+}
+
+// Quality Gates types
+export interface QualityChecks {
+  lint?: boolean;
+  typecheck?: boolean;
+  test?: boolean;
+}
+
+export interface QualityEvent {
+  timestamp: string;
+  file: string;
+  checks: QualityChecks;
+  taskId?: string;
+  sessionId?: string;
+}
+
+export interface QualityTimelineResponse {
+  events: QualityEvent[];
+}
+
+// Context Health types
+export type ContextWarningLevel = 'safe' | 'warn' | 'critical';
+
+export interface ContextHealth {
+  percentage: number;
+  warningLevel: ContextWarningLevel;
+  tokensUsed: number;
+  maxTokens?: number;
+  estimationMethod?: string;
+}
+
+// Worktree types
+export interface WorktreeAssociatedTask {
+  sessionId: string;
+  taskId: string;
+  taskSubject: string;
+}
+
+export interface WorktreeState {
+  path: string;
+  branch: string;
+  head: string;
+  dirty: boolean;
+  aheadCount: number;
+  behindCount: number;
+  associatedTasks?: WorktreeAssociatedTask[];
 }

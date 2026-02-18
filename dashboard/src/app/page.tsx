@@ -23,6 +23,7 @@ import {
   BarChart3,
   TrendingUp,
   Activity,
+  GitBranch,
 } from "lucide-react";
 import type {
   SnapshotResponse,
@@ -34,55 +35,14 @@ import type {
   TokenUsage,
   InsightsResponse,
 } from "@/types";
+import { ContextHealthMini, ContextHealthWidget } from "@/components/ContextHealthWidget";
+import { QualityTimeline } from "@/components/QualityTimeline";
+import { WorktreePanel } from "@/components/WorktreePanel";
+import { TypingPrompt } from "@/components/TypingPrompt";
+import type { QualityEvent } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type ViewMode = "live" | "plan" | "insights";
-
-function TypingPrompt({ lines }: { lines: string[] }) {
-  const [lineIndex, setLineIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const currentLine = lines[lineIndex];
-
-    if (!isDeleting && charIndex < currentLine.length) {
-      const timeout = setTimeout(
-        () => setCharIndex((c) => c + 1),
-        40 + Math.random() * 30,
-      );
-      return () => clearTimeout(timeout);
-    }
-
-    if (!isDeleting && charIndex === currentLine.length) {
-      const timeout = setTimeout(() => setIsDeleting(true), 2000);
-      return () => clearTimeout(timeout);
-    }
-
-    if (isDeleting && charIndex > 0) {
-      const timeout = setTimeout(() => setCharIndex((c) => c - 1), 20);
-      return () => clearTimeout(timeout);
-    }
-
-    if (isDeleting && charIndex === 0) {
-      setIsDeleting(false);
-      setLineIndex((i) => (i + 1) % lines.length);
-    }
-  }, [charIndex, isDeleting, lineIndex, lines]);
-
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="text-muted-foreground/30 text-4xl font-bold select-none">
-        &gt;_
-      </div>
-      <div className="h-8 flex items-center">
-        <span className="text-sm text-muted-foreground/60 typing-cursor pr-1">
-          {lines[lineIndex].slice(0, charIndex)}
-        </span>
-      </div>
-    </div>
-  );
-}
+type ViewMode = "live" | "plan" | "insights" | "worktrees";
 
 export default function Dashboard() {
   const [mode, setMode] = useState<ViewMode>("live");
@@ -409,6 +369,19 @@ export default function Dashboard() {
                 Insights
               </button>
             )}
+            {(availableModes.live || availableModes.plan) && (
+              <button
+                onClick={() => setMode("worktrees")}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  mode === "worktrees"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <GitBranch className="size-3" />
+                Worktrees
+              </button>
+            )}
           </div>
         </div>
 
@@ -466,6 +439,8 @@ export default function Dashboard() {
             sidebarCollapsed={sidebarCollapsed}
             mounted={mounted}
           />
+        ) : mode === "worktrees" ? (
+          <WorktreePanel />
         ) : (
           <InsightsView data={insightsData} />
         )}
@@ -505,6 +480,19 @@ function LiveView({
   sidebarCollapsed: boolean;
   mounted: boolean;
 }) {
+  // Aggregate context health across sessions that have data
+  const sessionsWithHealth = sessions.filter((s) => s.contextHealth != null);
+  const aggregateContextHealth = sessionsWithHealth.length > 0
+    ? (() => {
+        const maxPercentage = Math.max(
+          ...sessionsWithHealth.map((s) => s.contextHealth!.percentage)
+        );
+        const level =
+          maxPercentage >= 75 ? "critical" : maxPercentage >= 65 ? "warn" : "safe";
+        return { percentage: maxPercentage, warningLevel: level as "safe" | "warn" | "critical" };
+      })()
+    : null;
+
   if (sessions.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -624,13 +612,16 @@ function LiveView({
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 mt-1">
                   <span>{timeAgo(session.updatedAt)}</span>
-                  {session.tokenUsage && (
-                    <span
-                      title={`In: ${formatTokens(session.tokenUsage.inputTokens)} | Out: ${formatTokens(session.tokenUsage.outputTokens)} | Cache: ${formatTokens(session.tokenUsage.cacheReadTokens)}`}
-                    >
-                      {formatTokens(totalTokens(session.tokenUsage))} tok
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {session.tokenUsage && (
+                      <span
+                        title={`In: ${formatTokens(session.tokenUsage.inputTokens)} | Out: ${formatTokens(session.tokenUsage.outputTokens)} | Cache: ${formatTokens(session.tokenUsage.cacheReadTokens)}`}
+                      >
+                        {formatTokens(totalTokens(session.tokenUsage))} tok
+                      </span>
+                    )}
+                    <ContextHealthMini health={session.contextHealth} />
+                  </div>
                 </div>
               </button>
             ))}
@@ -640,6 +631,23 @@ function LiveView({
 
       {/* Kanban Board */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Live header: aggregate context health across all sessions */}
+        {aggregateContextHealth && aggregateContextHealth.warningLevel !== "safe" && (
+          <div
+            className={`px-4 py-1.5 flex items-center gap-2 text-xs border-b shrink-0 ${
+              aggregateContextHealth.warningLevel === "critical"
+                ? "bg-chart-5/10 border-chart-5/20 text-chart-5"
+                : "bg-chart-3/10 border-chart-3/20 text-chart-3"
+            }`}
+          >
+            <ContextHealthMini health={{ ...aggregateContextHealth, tokensUsed: 0 }} />
+            <span>
+              Highest context across {sessionsWithHealth.length} session{sessionsWithHealth.length !== 1 ? "s" : ""}:{" "}
+              {aggregateContextHealth.percentage}% (
+              {aggregateContextHealth.warningLevel})
+            </span>
+          </div>
+        )}
         {selectedSession ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Token Usage Bar */}
@@ -664,9 +672,14 @@ function LiveView({
                   <span className="text-muted-foreground">Cache Read </span>
                   {formatTokens(selectedSession.tokenUsage.cacheReadTokens)}
                 </span>
-                <span className="text-muted-foreground/60 ml-auto">
+                <span className="text-muted-foreground/60">
                   Total: {formatTokens(totalTokens(selectedSession.tokenUsage))}
                 </span>
+                {selectedSession.contextHealth && (
+                  <div className="ml-auto w-48">
+                    <ContextHealthWidget health={selectedSession.contextHealth} />
+                  </div>
+                )}
               </div>
             )}
             {/* Kanban Columns */}
@@ -921,6 +934,18 @@ function PlanView({
   sidebarCollapsed: boolean;
   mounted: boolean;
 }) {
+  const [qualityEvents, setQualityEvents] = useState<QualityEvent[]>([]);
+
+  useEffect(() => {
+    if (!selectedTask) {
+      setQualityEvents([]);
+      return;
+    }
+    fetch(`/quality-timeline?taskId=${encodeURIComponent(selectedTask.id)}`)
+      .then((r) => (r.ok ? r.json() : { events: [] }))
+      .then((d) => setQualityEvents(d.events ?? []))
+      .catch(() => setQualityEvents([]));
+  }, [selectedTask?.id]);
   if (!data || !data.snapshot) {
     return (
       <div className="flex-1 p-8">
@@ -1422,6 +1447,15 @@ function PlanView({
                         )}
                       </div>
                     </div>
+
+                    {qualityEvents.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">
+                          Quality Checks
+                        </h4>
+                        <QualityTimeline events={qualityEvents} />
+                      </div>
+                    )}
 
                     {Object.keys(agentStats).length > 0 && (
                       <div>

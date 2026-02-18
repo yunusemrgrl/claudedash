@@ -4,6 +4,7 @@ See what your AI agent is actually doing.
 
 [![npm](https://img.shields.io/npm/v/agent-scope)](https://www.npmjs.com/package/agent-scope)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![version](https://img.shields.io/badge/version-0.5.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -124,15 +125,61 @@ Append-only JSONL:
 {"task_id":"S1-T3","status":"BLOCKED","reason":"API key missing","timestamp":"2026-02-16T14:35:00Z","agent":"claude"}
 ```
 
+## New in v0.5.0 — Observability Features
+
+### Quality Gates
+
+Track lint, typecheck, and test results per task and view them as a timeline in the Plan mode dashboard.
+
+Log quality results in `execution.log`:
+
+```json
+{
+  "task_id": "F1-2",
+  "status": "DONE",
+  "timestamp": "2026-02-18T12:05:00Z",
+  "agent": "claude",
+  "meta": {
+    "file": "src/core/logParser.ts",
+    "quality": { "lint": true, "typecheck": true, "test": false }
+  }
+}
+```
+
+Select any task in Plan mode to see its quality check history with pass/fail badges. → [Quality Gates docs](docs/quality-gates.md)
+
+### Context Health
+
+See how much of Claude's context window each session is using, with color-coded warnings at 65% (warn) and 75% (critical).
+
+- Session cards show a compact `72%` indicator
+- Selected session shows a full progress bar in the token header
+- A header banner appears when any session crosses warn/critical level
+
+→ [Context Health docs](docs/context-health.md) | [Estimation methodology](docs/context-estimation.md)
+
+### Worktree Observability
+
+When running agents across multiple git worktrees in parallel, the new **Worktrees** tab shows:
+
+- Branch name and HEAD commit per worktree
+- Dirty/clean status (uncommitted changes)
+- Ahead/behind commits relative to upstream
+- Which agent tasks are running in each worktree
+
+→ [Worktree docs](docs/worktrees.md)
+
 ## API
 
 | Endpoint | Description |
 |---|---|
 | `GET /health` | Status + available modes |
-| `GET /sessions` | All Claude Code sessions |
+| `GET /sessions` | All Claude Code sessions (includes `contextHealth`) |
 | `GET /sessions/:id` | Tasks for a session |
 | `GET /events` | SSE stream |
 | `GET /snapshot` | Plan mode state |
+| `GET /quality-timeline` | Quality check events (filter with `?taskId=`) |
+| `GET /worktrees` | Git worktrees with task associations |
 
 ## Development
 
@@ -142,7 +189,7 @@ cd agent-scope && npm install
 cd dashboard && npm install && cd ..
 
 npm run build        # Build core + dashboard
-npm test             # 97 tests
+npm test             # 148 tests
 npm run dev          # Dev server with watch
 ```
 
