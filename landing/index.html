@@ -3,319 +3,495 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AgentScope — Diagnose Agent Runs With Confidence</title>
+    <title>agent-scope — See Inside Your AI Agent's Mind</title>
     <meta
       name="description"
-      content="AgentScope is a deterministic, local, passive execution observer for AI agent workflows. Diagnose, replay, and trust every run without changing your agents."
+      content="Live Kanban, Quality Gates, Context Health monitoring for Claude Code agents. One command. Zero setup. No database."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="page-glow" aria-hidden="true"></div>
-    <div class="page-noise" aria-hidden="true"></div>
-
-    <header class="site-header" data-animate>
+    <!-- NAV -->
+    <header class="site-header" id="site-header">
       <div class="container nav">
         <a class="logo" href="#top">
-          <span class="logo-mark">A</span>
-          AgentScope
+          <span class="logo-bracket">[</span>agent-scope<span class="logo-bracket">]</span>
         </a>
         <nav class="nav-links">
-          <a href="#product">Product</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#demo">Live Demo</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
+          <a href="#features">Features</a>
+          <a href="#demo">Demo</a>
+          <a href="#quickstart">Quick Start</a>
         </nav>
         <div class="nav-actions">
-          <a class="btn ghost" href="#demo">View demo</a>
-          <a class="btn primary" href="#get-started">Get started</a>
+          <a
+            class="btn-ghost-sm"
+            href="https://github.com/yunusemrgrl/agent-scope"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+            GitHub
+          </a>
+          <a class="btn-primary-sm" href="#quickstart">npm install →</a>
         </div>
       </div>
     </header>
 
     <main id="top">
-      <section class="hero" id="product">
-        <div class="container hero-grid">
-          <div class="hero-copy" data-animate>
-            <span class="pill">New: deterministic run replay</span>
-            <h1>Diagnose every agent run like a specialist visit.</h1>
-            <p class="lead">
-              AgentScope is a local, passive execution observer for AI agent workflows. Track
-              sessions, events, and quality gates in a timeline you can trust — without changing
-              your agents.
+      <!-- ─────────────── HERO ─────────────── -->
+      <section class="hero">
+        <div class="hero-bg" aria-hidden="true">
+          <div class="bg-glow bg-glow-1"></div>
+          <div class="bg-glow bg-glow-2"></div>
+          <div class="bg-grid"></div>
+        </div>
+
+        <div class="container hero-inner">
+          <!-- Copy side -->
+          <div class="hero-copy">
+            <div class="hero-badge" id="hero-badge">
+              <span class="badge-dot"></span>
+              <span>open source · MIT · npm</span>
+            </div>
+
+            <h1 class="hero-headline">
+              <span class="hero-line" id="hl-1">See Inside</span>
+              <span class="hero-line hero-line-accent" id="hl-2">Your AI Agent's</span>
+              <span class="hero-line" id="hl-3">Mind.</span>
+            </h1>
+
+            <p class="hero-sub" id="hero-sub">
+              Live Kanban · Quality Gates · Context Monitoring<br />
+              for Claude Code agents. Zero setup, no database.
             </p>
-            <div class="cta-row">
-              <a class="btn primary" href="#get-started">Start observing</a>
-              <a class="btn ghost" href="#demo">Watch the demo</a>
+
+            <div class="hero-ctas" id="hero-ctas">
+              <button class="btn-cmd" id="copy-cmd" title="Click to copy">
+                <span class="cmd-dollar">$</span>
+                <span class="cmd-text" id="cmd-text-1">npx agent-scope start</span>
+                <span class="cmd-copy-icon" aria-label="copy">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </span>
+              </button>
+              <a
+                class="btn-ghost-hero"
+                href="https://github.com/yunusemrgrl/agent-scope"
+                target="_blank"
+                rel="noopener"
+              >
+                View on GitHub ↗
+              </a>
             </div>
-            <div class="hero-stats">
-              <div>
-                <span>0</span>
-                <small>agent changes</small>
-              </div>
-              <div>
-                <span>24/7</span>
-                <small>timeline capture</small>
-              </div>
-              <div>
-                <span>5m</span>
-                <small>setup time</small>
-              </div>
-            </div>
-            <div class="hero-tags">
-              <span>Passive observer</span>
-              <span>Deterministic logs</span>
-              <span>Local-first</span>
+
+            <div class="terminal-hint" id="terminal-hint">
+              <span class="th-prompt">~</span>
+              <span class="th-cmd">npx agent-scope start</span>
+              <span class="th-arrow">→</span>
+              <a class="th-url" href="http://localhost:4317">localhost:4317</a>
+              <span class="th-cursor" id="th-cursor">▋</span>
             </div>
           </div>
-          <div class="hero-media" data-animate>
-            <div class="media-card">
-              <img src="assets/screenshot-1.png" alt="AgentScope dashboard preview" />
-              <div class="media-badge">
-                <span class="badge-dot"></span>
-                Live session timeline
+
+          <!-- Kanban demo side -->
+          <div class="hero-demo" id="hero-demo" aria-hidden="true">
+            <div class="demo-chrome">
+              <div class="chrome-bar">
+                <div class="chrome-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <div class="chrome-url">localhost:4317</div>
+                <div class="chrome-live">
+                  <span class="live-dot" id="live-dot"></span>
+                  live
+                </div>
               </div>
-            </div>
-            <div class="floating-card">
-              <div class="floating-header">
-                <span class="pulse"></span>
-                Diagnostics ready
+
+              <div class="kanban-wrap">
+                <div class="kb-mode-tabs">
+                  <span class="kb-tab kb-tab-active">Live</span>
+                  <span class="kb-tab">Plan</span>
+                  <span class="kb-tab">Insights</span>
+                </div>
+
+                <div class="kanban-board" id="kanban-board">
+                  <!-- Plan column -->
+                  <div class="kb-col">
+                    <div class="kb-col-head">
+                      <span>Plan</span>
+                      <span class="kb-badge">2</span>
+                    </div>
+                    <div class="kb-card" id="kc-r3">
+                      <div class="kc-top">
+                        <span class="kc-id">R3-routes</span>
+                      </div>
+                      <div class="kc-title">Extract route plugins</div>
+                      <span class="kc-tag kc-tag-refactor">refactor</span>
+                    </div>
+                    <div class="kb-card" id="kc-r4">
+                      <div class="kc-top">
+                        <span class="kc-id">R4-docs</span>
+                      </div>
+                      <div class="kc-title">Write architecture docs</div>
+                      <span class="kc-tag kc-tag-docs">docs</span>
+                    </div>
+                  </div>
+
+                  <!-- Active column -->
+                  <div class="kb-col">
+                    <div class="kb-col-head">
+                      <span>Active</span>
+                      <span class="kb-badge kb-badge-active">1</span>
+                    </div>
+                    <div class="kb-card kb-card-active" id="kc-r2">
+                      <div class="kc-top">
+                        <span class="kc-id">R2-hooks</span>
+                        <span class="kc-live-dot" id="kc-live-dot"></span>
+                      </div>
+                      <div class="kc-title">Extract React hooks</div>
+                      <div class="kc-prog-wrap">
+                        <div class="kc-prog-bar" id="kc-prog"></div>
+                      </div>
+                      <div class="kc-quality">
+                        <span class="qg qg-pass">lint ✓</span>
+                        <span class="qg qg-pass">types ✓</span>
+                        <span class="qg qg-pending" id="qg-tests">tests…</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Review column -->
+                  <div class="kb-col">
+                    <div class="kb-col-head">
+                      <span>Review</span>
+                      <span class="kb-badge">1</span>
+                    </div>
+                    <div class="kb-card" id="kc-r1">
+                      <div class="kc-top">
+                        <span class="kc-id">R1-views</span>
+                      </div>
+                      <div class="kc-title">Slim page.tsx to views</div>
+                      <div class="kc-quality">
+                        <span class="qg qg-pass">lint ✓</span>
+                        <span class="qg qg-pass">types ✓</span>
+                        <span class="qg qg-pass">tests ✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Done column -->
+                  <div class="kb-col">
+                    <div class="kb-col-head">
+                      <span>Done</span>
+                      <span class="kb-badge kb-badge-done">3</span>
+                    </div>
+                    <div class="kb-card kb-card-done" id="kc-r0a">
+                      <div class="kc-top">
+                        <span class="kc-id">R0-types</span>
+                        <span class="kc-check">✓</span>
+                      </div>
+                      <div class="kc-title">Add type definitions</div>
+                    </div>
+                    <div class="kb-card kb-card-done" id="kc-r0b">
+                      <div class="kc-top">
+                        <span class="kc-id">R0-setup</span>
+                        <span class="kc-check">✓</span>
+                      </div>
+                      <div class="kc-title">Init project structure</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Context health footer -->
+                <div class="kb-footer">
+                  <span class="ctx-label">ctx</span>
+                  <div class="ctx-bar">
+                    <div class="ctx-fill" id="ctx-fill"></div>
+                  </div>
+                  <span class="ctx-pct" id="ctx-pct">42%</span>
+                  <span class="ctx-badge ctx-safe" id="ctx-badge">safe</span>
+                </div>
               </div>
-              <p>Quality gates flagged 3 anomalies in the last run.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="trust" data-animate>
+      <!-- ─────────────── FEATURES ─────────────── -->
+      <section class="features" id="features">
         <div class="container">
-          <p>Designed for teams shipping agentic workflows daily.</p>
-          <div class="logo-row">
-            <span>Autonomous Ops</span>
-            <span>Studio Labs</span>
-            <span>Atlas AI</span>
-            <span>Runbook Cloud</span>
+          <div class="section-eyebrow">Core Features</div>
+          <h2 class="section-title">Observability designed<br />for AI agents.</h2>
+
+          <div class="features-grid">
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-cyan">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </div>
+              <h3>Live Kanban Board</h3>
+              <p>
+                Real-time task status from <code>~/.claude/tasks/</code>. Watch your agent's
+                todo list update as it works — Plan, In Progress, Review, Done.
+              </p>
+              <div class="fc-tags">
+                <span>SSE updates</span>
+                <span>TodoWrite</span>
+                <span>zero polling</span>
+              </div>
+            </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                </svg>
+              </div>
+              <h3>Plan Mode &amp; Dependencies</h3>
+              <p>
+                Parse <code>queue.md</code> with task dependencies, acceptance criteria, and
+                blocked status. Full dependency graph visualization.
+              </p>
+              <div class="fc-tags">
+                <span>queue.md</span>
+                <span>execution.log</span>
+                <span>dep graph</span>
+              </div>
+            </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-orange">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <h3>Quality Gates</h3>
+              <p>
+                Log lint, typecheck, and test results per task via <code>meta.quality</code>.
+                See ✅/❌ inline in each Kanban card with full timeline history.
+              </p>
+              <div class="fc-tags">
+                <span>lint</span>
+                <span>typecheck</span>
+                <span>tests</span>
+              </div>
+            </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </div>
+              <h3>Context Health Monitoring</h3>
+              <p>
+                Token-based context window estimation. Green → yellow → red warnings
+                when sessions approach 65% and 75% usage. Aggregate banner in live mode.
+              </p>
+              <div class="fc-tags">
+                <span>65% warn</span>
+                <span>75% critical</span>
+                <span>per session</span>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section class="diagnostics">
-        <div class="container diagnostics-grid">
-          <div class="diagnostics-copy" data-animate>
-            <span class="section-kicker">Agent health report</span>
-            <h2>Turn noisy runs into clear diagnoses.</h2>
+      <!-- ─────────────── SCREENSHOT DEMO ─────────────── -->
+      <section class="demo-section" id="demo">
+        <div class="container">
+          <div class="section-eyebrow">Dashboard</div>
+          <h2 class="section-title">Everything in one view.</h2>
+          <p class="section-sub">
+            Session sidebar, Kanban board, context health bars, quality gates — all updating via SSE.<br />
+            Zero refresh. No database. No cloud.
+          </p>
+
+          <div class="screenshot-wrap" data-animate>
+            <div class="screenshot-chrome">
+              <div class="sc-bar">
+                <div class="sc-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <div class="sc-url">
+                  <span class="sc-lock">🔒</span> localhost:4317
+                </div>
+                <div class="sc-spacer"></div>
+              </div>
+              <img
+                src="assets/screenshot-1.png"
+                alt="agent-scope dashboard — live kanban with sessions sidebar and context health bar"
+                class="sc-img"
+              />
+            </div>
+            <div class="sc-caption">
+              <span class="sc-dot"></span>
+              Updates in real-time via SSE — typically within ~100ms of every file write
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── QUICK START ─────────────── -->
+      <section class="quickstart" id="quickstart">
+        <div class="container">
+          <div class="qs-header">
+            <div class="section-eyebrow">Quick Start</div>
+            <h2 class="section-title">Up in 30 seconds.</h2>
+          </div>
+
+          <div class="qs-layout">
+            <div class="terminal-card" data-animate>
+              <div class="term-header">
+                <div class="term-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="term-title">Terminal</span>
+                <button class="term-copy-btn" id="term-copy">copy</button>
+              </div>
+              <pre class="term-body"><code><span class="t-comment"># Start watching default Claude tasks folder</span>
+<span class="t-prompt">$</span> <span class="t-cmd">npx agent-scope start</span>
+
+<span class="t-comment"># Custom project path</span>
+<span class="t-prompt">$</span> <span class="t-cmd">npx agent-scope start</span> <span class="t-flag">--claude-dir</span> <span class="t-arg">~/my-project/.claude</span>
+
+<span class="t-comment"># Custom port</span>
+<span class="t-prompt">$</span> <span class="t-cmd">npx agent-scope start</span> <span class="t-flag">--port</span> <span class="t-arg">3000</span>
+
+<span class="t-out">▶</span> <span class="t-info">Reading ~/.claude/tasks/</span>
+<span class="t-out">▶</span> <span class="t-info">Watching .agent-scope/queue.md</span>
+<span class="t-ok">✓</span> <span class="t-success">Server running at http://localhost:4317</span></code></pre>
+            </div>
+
+            <div class="qs-steps">
+              <div class="qs-step" data-animate>
+                <span class="qs-num">01</span>
+                <div>
+                  <h3>Run the CLI</h3>
+                  <p>
+                    Fastify server starts at <code>localhost:4317</code>. Chokidar watches
+                    <code>~/.claude/tasks/</code> and <code>.agent-scope/</code> for changes.
+                  </p>
+                </div>
+              </div>
+              <div class="qs-step" data-animate>
+                <span class="qs-num">02</span>
+                <div>
+                  <h3>Agent writes tasks</h3>
+                  <p>
+                    Claude Code's <code>TodoWrite</code> tool writes task files. agent-scope
+                    picks them up instantly and broadcasts a <code>sessions</code> SSE event.
+                  </p>
+                </div>
+              </div>
+              <div class="qs-step" data-animate>
+                <span class="qs-num">03</span>
+                <div>
+                  <h3>Dashboard updates live</h3>
+                  <p>
+                    No polling. No refresh needed. SSE pushes changes to all open browser tabs
+                    within ~100ms of every file write.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── WORKTREES ─────────────── -->
+      <section class="worktrees-section">
+        <div class="container wt-grid">
+          <div class="wt-copy" data-animate>
+            <div class="section-eyebrow">Git Worktrees</div>
+            <h2>Multi-repo agent visibility.</h2>
             <p>
-              Capture every event, prompt, and tool call into a structured timeline. Filter by
-              session, drill into anomalies, and export evidence for your team.
+              Running agents across multiple git worktrees? agent-scope maps sessions to branches by
+              <code>cwd</code> and shows dirty state, ahead/behind counts, and associated tasks per
+              worktree.
             </p>
-            <ul class="feature-list">
-              <li>Immutable run ledger with deterministic ordering.</li>
-              <li>Quality gates highlighting drift, retries, and regressions.</li>
-              <li>Local-first storage with fast query APIs.</li>
-            </ul>
+            <div class="wt-tags">
+              <span class="wt-tag">git worktree list</span>
+              <span class="wt-tag">dirty detection</span>
+              <span class="wt-tag">ahead / behind</span>
+              <span class="wt-tag">task mapping</span>
+            </div>
           </div>
-          <div class="diagnostics-cards" data-animate>
-            <article class="card">
-              <h3>Vitals</h3>
-              <p>Track latency, retries, and token budgets across every step.</p>
-            </article>
-            <article class="card">
-              <h3>Prescription</h3>
-              <p>Generate action items from run diffs and annotated evidence.</p>
-            </article>
-            <article class="card">
-              <h3>Timeline</h3>
-              <p>Replay sessions exactly as they happened with total ordering.</p>
-            </article>
+          <div class="wt-media" data-animate>
+            <img
+              src="assets/screenshot-2.png"
+              alt="agent-scope insights panel and worktree visibility"
+            />
           </div>
         </div>
       </section>
 
-      <section class="workflow" id="workflow">
+      <!-- ─────────────── FINAL CTA ─────────────── -->
+      <section class="final-cta">
         <div class="container">
-          <div class="section-heading" data-animate>
-            <span class="section-kicker">Workflow</span>
-            <h2>From signal capture to trusted outcomes.</h2>
-          </div>
-          <div class="steps" data-animate>
-            <div class="step">
-              <span class="step-index">01</span>
-              <h3>Observe</h3>
-              <p>Run the CLI beside your agents. No SDKs, no refactors.</p>
+          <div class="cta-card" data-animate>
+            <div class="cta-glow" aria-hidden="true"></div>
+            <h2>Start watching your agent.</h2>
+            <p>One command. No config. See what your AI is doing in real time.</p>
+            <div class="cta-actions">
+              <button class="btn-cmd btn-cmd-lg" id="copy-cmd-2" title="Click to copy">
+                <span class="cmd-dollar">$</span>
+                <span class="cmd-text" id="cmd-text-2">npx agent-scope start</span>
+                <span class="cmd-copy-icon" aria-label="copy">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </span>
+              </button>
+              <a
+                class="btn-outline-lg"
+                href="https://github.com/yunusemrgrl/agent-scope"
+                target="_blank"
+                rel="noopener"
+              >
+                GitHub ↗
+              </a>
             </div>
-            <div class="step">
-              <span class="step-index">02</span>
-              <h3>Diagnose</h3>
-              <p>Inspect every tool call, prompt, and output in context.</p>
-            </div>
-            <div class="step">
-              <span class="step-index">03</span>
-              <h3>Recover</h3>
-              <p>Replay sessions, compare deltas, and patch regressions fast.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="demo" id="demo">
-        <div class="container demo-grid">
-          <div class="demo-copy" data-animate>
-            <span class="section-kicker">Live demo</span>
-            <h2>See the timeline in motion.</h2>
-            <p>
-              This is a real session capture from AgentScope. Watch how events, tasks, and quality
-              checks align in a single narrative view.
-            </p>
-            <div class="demo-actions">
-              <a class="btn primary" href="#get-started">Launch locally</a>
-              <a class="btn ghost" href="#pricing">Compare plans</a>
-            </div>
-          </div>
-          <div class="demo-media" data-animate>
-            <img src="assets/screenrecord.gif" alt="AgentScope live session recording" />
-          </div>
-        </div>
-      </section>
-
-      <section class="showcase">
-        <div class="container showcase-grid">
-          <div class="showcase-media" data-animate>
-            <img src="assets/screenshot-2.png" alt="AgentScope insights panel" />
-          </div>
-          <div class="showcase-copy" data-animate>
-            <span class="section-kicker">Insights</span>
-            <h2>Quality gates with evidence, not guesses.</h2>
-            <p>
-              Track regressions and policy violations with a timeline-backed report. Each alert
-              links directly to the evidence that triggered it.
-            </p>
-            <div class="pill-row">
-              <span>Replay diffs</span>
-              <span>Trace exports</span>
-              <span>Session health</span>
-              <span>Worktree snapshots</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="pricing" id="pricing">
-        <div class="container">
-          <div class="section-heading" data-animate>
-            <span class="section-kicker">Pricing</span>
-            <h2>Built for teams shipping today.</h2>
-          </div>
-          <div class="pricing-grid" data-animate>
-            <article class="price-card">
-              <h3>Starter</h3>
-              <p class="price">Free</p>
-              <ul>
-                <li>Local observer + timeline</li>
-                <li>1 workspace</li>
-                <li>Manual exports</li>
-              </ul>
-              <a class="btn ghost" href="#get-started">Use locally</a>
-            </article>
-            <article class="price-card highlight">
-              <div class="plan-tag">Most popular</div>
-              <h3>Team</h3>
-              <p class="price">$29<span>/seat</span></p>
-              <ul>
-                <li>Shared sessions + review</li>
-                <li>Quality gate automation</li>
-                <li>Priority diagnostics</li>
-              </ul>
-              <a class="btn primary" href="#get-started">Start trial</a>
-            </article>
-            <article class="price-card">
-              <h3>Enterprise</h3>
-              <p class="price">Custom</p>
-              <ul>
-                <li>On-prem + SSO</li>
-                <li>Compliance evidence bundles</li>
-                <li>Dedicated support</li>
-              </ul>
-              <a class="btn ghost" href="#get-started">Contact sales</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="faq" id="faq">
-        <div class="container">
-          <div class="section-heading" data-animate>
-            <span class="section-kicker">FAQ</span>
-            <h2>Clear answers for busy builders.</h2>
-          </div>
-          <div class="faq-grid" data-animate>
-            <article>
-              <h3>Does this modify my agents?</h3>
-              <p>No. AgentScope observes from the outside with passive hooks.</p>
-            </article>
-            <article>
-              <h3>Where is data stored?</h3>
-              <p>Local-first by default. Choose where to persist run history.</p>
-            </article>
-            <article>
-              <h3>Can I replay sessions?</h3>
-              <p>Yes — the timeline records deterministic ordering for replay.</p>
-            </article>
-            <article>
-              <h3>Is there a hosted option?</h3>
-              <p>Team and Enterprise plans can sync to hosted dashboards.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="cta" id="get-started">
-        <div class="container cta-card" data-animate>
-          <div>
-            <h2>Ready to give your agents a checkup?</h2>
-            <p>Spin up AgentScope locally in minutes and watch your workflows unfold.</p>
-          </div>
-          <div class="cta-actions">
-            <a class="btn primary" href="#top">Get the CLI</a>
-            <a class="btn ghost" href="#demo">Book a demo</a>
           </div>
         </div>
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="site-footer">
-      <div class="container footer-grid">
-        <div>
-          <div class="logo">AgentScope</div>
-          <p>Deterministic, local, passive execution observer for AI agent workflows.</p>
+      <div class="container footer-inner">
+        <div class="footer-logo">
+          <span class="logo-bracket">[</span>agent-scope<span class="logo-bracket">]</span>
         </div>
-        <div>
-          <h4>Product</h4>
-          <a href="#product">Overview</a>
-          <a href="#workflow">Workflow</a>
-          <a href="#demo">Live demo</a>
+        <div class="footer-links">
+          <a href="https://github.com/yunusemrgrl/agent-scope" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/agent-scope" target="_blank" rel="noopener">npm</a>
+          <a href="https://github.com/yunusemrgrl/agent-scope/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+          <a href="https://github.com/yunusemrgrl/agent-scope/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture</a>
         </div>
-        <div>
-          <h4>Resources</h4>
-          <a href="#faq">FAQ</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#get-started">Get started</a>
-        </div>
-        <div>
-          <h4>Contact</h4>
-          <a href="mailto:hello@agentscope.dev">hello@agentscope.dev</a>
-          <span>Remote-first • Istanbul</span>
-        </div>
+        <div class="footer-copy">MIT License · © 2026 agent-scope</div>
       </div>
-      <div class="container footer-meta">© 2026 AgentScope. Built for reliable agents.</div>
     </footer>
 
+    <script src="anime.min.js"></script>
     <script src="main.js"></script>
   </body>
 </html>
