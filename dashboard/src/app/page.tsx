@@ -1525,20 +1525,41 @@ function InsightsView({ data }: { data: InsightsResponse | null }) {
 
       {/* Report Content */}
       {reportError ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <BarChart3 className="size-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mb-2">No Report Found</h2>
-            <p className="text-muted-foreground mb-4">
-              Claude Code insights report hasn't been generated yet.
-            </p>
-            <div className="bg-muted rounded-lg p-4 text-left">
-              <p className="text-sm text-foreground mb-2">To generate the report:</p>
-              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Open Claude Code CLI</li>
-                <li>Run the <code className="bg-background px-1 py-0.5 rounded text-xs">/insight</code> command</li>
-                <li>Wait for analysis to complete</li>
-                <li>Refresh this page</li>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-2xl">
+            <BarChart3 className="size-16 mx-auto mb-6 text-muted-foreground" />
+            <TypingPrompt
+              lines={[
+                "Unlock deep insights into your Claude Code usage...",
+                "Discover what's working, what's slowing you down...",
+                "See your most-used tools, friction points, and wins...",
+                "Get personalized CLAUDE.md suggestions...",
+                "Learn about features you haven't tried yet...",
+                "Open Claude Code and run: /insight",
+              ]}
+            />
+            <div className="mt-8 bg-muted/50 border border-border rounded-lg p-6">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Brain className="size-4" />
+                How to generate your insights:
+              </h3>
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Open your terminal with an active Claude Code session</li>
+                <li>
+                  Type <code className="bg-background px-2 py-0.5 rounded text-xs font-mono text-foreground">/insight</code> and press Enter
+                </li>
+                <li>Wait 10-30 seconds while Claude analyzes your usage patterns</li>
+                <li>
+                  Click{" "}
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <RefreshCw className="size-3" />
+                    Refresh
+                  </button>{" "}
+                  to see your report
+                </li>
               </ol>
             </div>
           </div>
