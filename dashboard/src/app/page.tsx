@@ -324,7 +324,7 @@ export default function Dashboard() {
               agent-scope
             </h1>
             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-              v0.4.0
+              v0.5.0
             </span>
           </div>
 

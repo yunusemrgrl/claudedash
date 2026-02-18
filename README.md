@@ -189,7 +189,7 @@ cd agent-scope && npm install
 cd dashboard && npm install && cd ..
 
 npm run build        # Build core + dashboard
-npm test             # 148 tests
+npm test             # 163 tests
 npm run dev          # Dev server with watch
 ```
 
