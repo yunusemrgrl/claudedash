@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('agent-scope')
   .description('Deterministic, local, passive execution observer for AI agent workflows')
-  .version('0.5.1');
+  .version('0.5.2');
 
 program
   .command('init')

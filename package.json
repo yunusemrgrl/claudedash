@@ -1,6 +1,6 @@
 {
   "name": "agent-scope",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Deterministic, local, passive execution observer for AI agent workflows",
   "type": "module",
   "bin": {
