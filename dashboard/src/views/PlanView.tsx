@@ -146,7 +146,7 @@ export function PlanView({
       <div
         className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
           mounted ? "transition-all duration-300" : ""
-        } ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[25%] min-w-[280px]"}`}
+        } ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-72 min-w-[280px]"}`}
       >
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-3">

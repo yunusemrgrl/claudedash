@@ -286,7 +286,72 @@ function initCopyButtons() {
   }
 }
 
-// ── 6. Nav scroll shadow ───────────────────────────────
+// ── 6. GitHub star button ──────────────────────────────
+function initStarButton() {
+  const btn = $('#star-btn');
+  const icon = $('#star-icon');
+  if (!btn || !icon) return;
+
+  btn.addEventListener('mouseenter', () => {
+    anime({
+      targets: icon,
+      rotate: [0, 22],
+      scale: [1, 1.45],
+      duration: 280,
+      easing: 'easeOutBack',
+    });
+  });
+
+  btn.addEventListener('mouseleave', () => {
+    anime({
+      targets: icon,
+      rotate: 0,
+      scale: 1,
+      duration: 450,
+      easing: 'easeOutElastic(1, 0.5)',
+    });
+  });
+
+  btn.addEventListener('click', () => {
+    // Sparkle burst from button center
+    const rect = btn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const colors = ['#fbbf24', '#fde68a', '#f59e0b', '#fff'];
+
+    for (let i = 0; i < 8; i++) {
+      const spark = document.createElement('div');
+      spark.className = 'star-spark';
+      spark.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[i % colors.length]}`;
+      document.body.appendChild(spark);
+
+      const angle = (i / 8) * Math.PI * 2;
+      const dist = 28 + Math.random() * 18;
+
+      anime({
+        targets: spark,
+        translateX: Math.cos(angle) * dist,
+        translateY: Math.sin(angle) * dist,
+        opacity: [1, 0],
+        scale: [1.2, 0],
+        duration: 550 + Math.random() * 150,
+        easing: 'easeOutCubic',
+        complete() { spark.remove(); },
+      });
+    }
+
+    // Full star spin pop
+    anime({
+      targets: icon,
+      scale: [1, 1.9, 1],
+      rotate: [0, 360],
+      duration: 650,
+      easing: 'easeOutBack',
+    });
+  });
+}
+
+// ── 7. Nav scroll shadow ──────────────────────────────
 function initNavScroll() {
   const header = $('#site-header');
   if (!header) return;
@@ -326,6 +391,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initScrollReveal();
   initFeatureHover();
   initCopyButtons();
+  initStarButton();
   initNavScroll();
   initParallax();
 });

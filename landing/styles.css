@@ -179,6 +179,44 @@ code {
 }
 .btn-ghost-sm:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
 
+/* ── GitHub Star button ────────────────────────────── */
+.btn-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.07);
+  padding: 7px 15px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 999px;
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.btn-star:hover {
+  background: rgba(251, 191, 36, 0.13);
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.2);
+}
+.star-svg {
+  fill: #fbbf24;
+  flex-shrink: 0;
+  transform-origin: center;
+}
+.star-spark {
+  position: fixed;
+  pointer-events: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fbbf24;
+  z-index: 9999;
+}
+
 .btn-primary-sm {
   display: inline-flex;
   align-items: center;
@@ -1145,6 +1183,7 @@ code {
 @media (max-width: 700px) {
   .nav-links { display: none; }
   .nav-actions .btn-ghost-sm { display: none; }
+  .nav-actions .btn-star { display: none; }
 
   .hero { padding: 100px 0 60px; }
 
