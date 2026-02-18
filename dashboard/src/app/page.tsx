@@ -1491,59 +1491,67 @@ function PlanView({
 
 // Insights View Component
 function InsightsView({ data }: { data: InsightsResponse | null }) {
-  if (!data) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <BarChart3 className="size-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold mb-2">Loading Insights...</h2>
-          <p className="text-muted-foreground">Analyzing your workflow data</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { live, plan, mode: dataMode } = data;
+  const [reportError, setReportError] = useState(false);
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8 space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Analytics & Insights</h1>
-          <p className="text-muted-foreground">
-            Generated at {new Date(data.generatedAt).toLocaleString()}
-          </p>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Minimal Top Bar */}
+      <div className="px-4 py-2 border-b border-border bg-sidebar/30 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <Brain className="size-4 text-primary" />
+          <span className="text-sm font-medium">Claude Code Insights</span>
+          <span className="text-xs text-muted-foreground">
+            Usage analytics from /insight command
+          </span>
         </div>
-
-        {/* Claude Code Insights Report */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-border bg-muted/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Brain className="size-5 text-primary" />
-                <h2 className="text-lg font-semibold">Claude Code Insights</h2>
-              </div>
-              <a
-                href="/claude-insights"
-                target="_blank"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Open in new tab →
-              </a>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Detailed usage report from Claude Code /insight command
-            </p>
-          </div>
-          <iframe
-            src="/claude-insights"
-            className="w-full h-[800px] border-0"
-            sandbox="allow-scripts allow-same-origin"
-            title="Claude Code Insights Report"
-          />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            title="Refresh insights"
+          >
+            <RefreshCw className="size-3" />
+            Refresh
+          </button>
+          <a
+            href="/claude-insights"
+            target="_blank"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Open in new tab →
+          </a>
         </div>
       </div>
+
+      {/* Report Content */}
+      {reportError ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <BarChart3 className="size-16 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-xl font-semibold mb-2">No Report Found</h2>
+            <p className="text-muted-foreground mb-4">
+              Claude Code insights report hasn't been generated yet.
+            </p>
+            <div className="bg-muted rounded-lg p-4 text-left">
+              <p className="text-sm text-foreground mb-2">To generate the report:</p>
+              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Open Claude Code CLI</li>
+                <li>Run the <code className="bg-background px-1 py-0.5 rounded text-xs">/insight</code> command</li>
+                <li>Wait for analysis to complete</li>
+                <li>Refresh this page</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <iframe
+          src="/claude-insights"
+          className="flex-1 w-full border-0"
+          sandbox="allow-scripts allow-same-origin"
+          title="Claude Code Insights Report"
+          onError={() => setReportError(true)}
+        />
+      )}
     </div>
   );
 }
