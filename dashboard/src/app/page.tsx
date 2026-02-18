@@ -47,7 +47,10 @@ function TypingPrompt({ lines }: { lines: string[] }) {
     const currentLine = lines[lineIndex];
 
     if (!isDeleting && charIndex < currentLine.length) {
-      const timeout = setTimeout(() => setCharIndex((c) => c + 1), 40 + Math.random() * 30);
+      const timeout = setTimeout(
+        () => setCharIndex((c) => c + 1),
+        40 + Math.random() * 30,
+      );
       return () => clearTimeout(timeout);
     }
 
@@ -69,7 +72,9 @@ function TypingPrompt({ lines }: { lines: string[] }) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="text-muted-foreground/30 text-4xl font-bold select-none">&gt;_</div>
+      <div className="text-muted-foreground/30 text-4xl font-bold select-none">
+        &gt;_
+      </div>
       <div className="h-8 flex items-center">
         <span className="text-sm text-muted-foreground/60 typing-cursor pr-1">
           {lines[lineIndex].slice(0, charIndex)}
@@ -81,12 +86,18 @@ function TypingPrompt({ lines }: { lines: string[] }) {
 
 export default function Dashboard() {
   const [mode, setMode] = useState<ViewMode>("live");
-  const [availableModes, setAvailableModes] = useState({ live: false, plan: false });
+  const [availableModes, setAvailableModes] = useState({
+    live: false,
+    plan: false,
+  });
 
   // Live mode state
   const [sessions, setSessions] = useState<ClaudeSession[]>([]);
-  const [selectedSession, setSelectedSession] = useState<ClaudeSession | null>(null);
-  const [selectedClaudeTask, setSelectedClaudeTask] = useState<ClaudeTask | null>(null);
+  const [selectedSession, setSelectedSession] = useState<ClaudeSession | null>(
+    null,
+  );
+  const [selectedClaudeTask, setSelectedClaudeTask] =
+    useState<ClaudeTask | null>(null);
 
   // Plan mode state
   const [planData, setPlanData] = useState<SnapshotResponse | null>(null);
@@ -94,7 +105,9 @@ export default function Dashboard() {
   const [expandedSlices, setExpandedSlices] = useState<Set<string>>(new Set());
 
   // Insights mode state
-  const [insightsData, setInsightsData] = useState<InsightsResponse | null>(null);
+  const [insightsData, setInsightsData] = useState<InsightsResponse | null>(
+    null,
+  );
 
   // Shared state
   const [loading, setLoading] = useState(true);
@@ -189,17 +202,32 @@ export default function Dashboard() {
     if (mode === "live" && availableModes.live) fetchSessions();
     if (mode === "plan" && availableModes.plan) fetchSnapshot();
     if (mode === "insights") fetchInsights();
-  }, [mode, loading, availableModes, fetchSessions, fetchSnapshot, fetchInsights]);
+  }, [
+    mode,
+    loading,
+    availableModes,
+    fetchSessions,
+    fetchSnapshot,
+    fetchInsights,
+  ]);
 
   // Refs for latest fetch functions and mode — SSE handler uses these to avoid stale closures
   const fetchSessionsRef = useRef(fetchSessions);
   const fetchSnapshotRef = useRef(fetchSnapshot);
   const fetchInsightsRef = useRef(fetchInsights);
   const modeRef = useRef(mode);
-  useEffect(() => { fetchSessionsRef.current = fetchSessions; }, [fetchSessions]);
-  useEffect(() => { fetchSnapshotRef.current = fetchSnapshot; }, [fetchSnapshot]);
-  useEffect(() => { fetchInsightsRef.current = fetchInsights; }, [fetchInsights]);
-  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => {
+    fetchSessionsRef.current = fetchSessions;
+  }, [fetchSessions]);
+  useEffect(() => {
+    fetchSnapshotRef.current = fetchSnapshot;
+  }, [fetchSnapshot]);
+  useEffect(() => {
+    fetchInsightsRef.current = fetchInsights;
+  }, [fetchInsights]);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   // SSE connection — opens once on mount, never reconnects due to state changes
   useEffect(() => {
@@ -211,12 +239,16 @@ export default function Dashboard() {
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "sessions" && modeRef.current === "live") fetchSessionsRef.current();
-        if (data.type === "plan" && modeRef.current === "plan") fetchSnapshotRef.current();
+        if (data.type === "sessions" && modeRef.current === "live")
+          fetchSessionsRef.current();
+        if (data.type === "plan" && modeRef.current === "plan")
+          fetchSnapshotRef.current();
         if (data.type === "sessions" || data.type === "plan") {
           if (modeRef.current === "insights") fetchInsightsRef.current();
         }
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
     };
 
     es.onerror = () => {
@@ -246,13 +278,15 @@ export default function Dashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "DONE": case "completed":
+      case "DONE":
+      case "completed":
         return "bg-chart-2/20 text-chart-2";
       case "FAILED":
         return "bg-chart-5/20 text-chart-5";
       case "BLOCKED":
         return "bg-chart-3/20 text-chart-3";
-      case "READY": case "pending":
+      case "READY":
+      case "pending":
         return "bg-chart-1/20 text-chart-1";
       case "in_progress":
         return "bg-chart-4/20 text-chart-4";
@@ -263,13 +297,15 @@ export default function Dashboard() {
 
   const getStatusDotColor = (status: string) => {
     switch (status) {
-      case "DONE": case "completed":
+      case "DONE":
+      case "completed":
         return "bg-chart-2";
       case "FAILED":
         return "bg-chart-5";
       case "BLOCKED":
         return "bg-chart-3";
-      case "READY": case "pending":
+      case "READY":
+      case "pending":
         return "bg-chart-1";
       case "in_progress":
         return "bg-chart-4";
@@ -280,10 +316,14 @@ export default function Dashboard() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "pending": return "PENDING";
-      case "in_progress": return "IN PROGRESS";
-      case "completed": return "COMPLETED";
-      default: return status;
+      case "pending":
+        return "PENDING";
+      case "in_progress":
+        return "IN PROGRESS";
+      case "completed":
+        return "COMPLETED";
+      default:
+        return status;
     }
   };
 
@@ -313,11 +353,19 @@ export default function Dashboard() {
             className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {sidebarCollapsed ? <PanelLeft className="size-4" /> : <PanelLeftClose className="size-4" />}
+            {sidebarCollapsed ? (
+              <PanelLeft className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
           </button>
           <div className="flex items-baseline gap-2">
-            <h1 className="text-lg font-semibold text-foreground">agent-scope</h1>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v0.4.0</span>
+            <h1 className="text-lg font-semibold text-foreground">
+              agent-scope
+            </h1>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+              v0.4.0
+            </span>
           </div>
 
           {/* Mode Toggle */}
@@ -376,7 +424,9 @@ export default function Dashboard() {
             />
           </div>
           <button
-            onClick={() => mode === "live" ? fetchSessions() : fetchSnapshot()}
+            onClick={() =>
+              mode === "live" ? fetchSessions() : fetchSnapshot()
+            }
             className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
           >
             <RefreshCw className="size-3.5 text-muted-foreground" />
@@ -488,7 +538,9 @@ function LiveView({
   const sessionProgress = (session: ClaudeSession) => {
     if (session.tasks.length === 0) return 0;
     return Math.round(
-      (session.tasks.filter((t) => t.status === "completed").length / session.tasks.length) * 100,
+      (session.tasks.filter((t) => t.status === "completed").length /
+        session.tasks.length) *
+        100,
     );
   };
 
@@ -514,9 +566,11 @@ function LiveView({
   return (
     <>
       {/* Session Sidebar */}
-      <div className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
-        mounted ? "transition-all duration-300" : ""
-      } ${sidebarCollapsed ? "w-0 border-r-0" : "w-[220px]"}`}>
+      <div
+        className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
+          mounted ? "transition-all duration-300" : ""
+        } ${sidebarCollapsed ? "w-0 border-r-0" : "w-[220px]"}`}
+      >
         <div className="p-3 border-b border-sidebar-border">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Sessions
@@ -561,13 +615,19 @@ function LiveView({
                     />
                   </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {session.tasks.filter((t) => t.status === "completed").length}/{session.tasks.length}
+                    {
+                      session.tasks.filter((t) => t.status === "completed")
+                        .length
+                    }
+                    /{session.tasks.length}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 mt-1">
                   <span>{timeAgo(session.updatedAt)}</span>
                   {session.tokenUsage && (
-                    <span title={`In: ${formatTokens(session.tokenUsage.inputTokens)} | Out: ${formatTokens(session.tokenUsage.outputTokens)} | Cache: ${formatTokens(session.tokenUsage.cacheReadTokens)}`}>
+                    <span
+                      title={`In: ${formatTokens(session.tokenUsage.inputTokens)} | Out: ${formatTokens(session.tokenUsage.outputTokens)} | Cache: ${formatTokens(session.tokenUsage.cacheReadTokens)}`}
+                    >
                       {formatTokens(totalTokens(session.tokenUsage))} tok
                     </span>
                   )}
@@ -585,7 +645,9 @@ function LiveView({
             {/* Token Usage Bar */}
             {selectedSession.tokenUsage && (
               <div className="bg-sidebar border-b border-sidebar-border px-4 py-2 flex items-center gap-6 text-xs shrink-0">
-                <span className="text-muted-foreground font-medium">Tokens:</span>
+                <span className="text-muted-foreground font-medium">
+                  Tokens:
+                </span>
                 <span className="text-foreground">
                   <span className="text-muted-foreground">In </span>
                   {formatTokens(selectedSession.tokenUsage.inputTokens)}
@@ -610,126 +672,145 @@ function LiveView({
             {/* Kanban Columns */}
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
-              <KanbanColumn
-                title="Pending"
-                count={pending.length}
-                tasks={pending}
-                statusColor="chart-1"
-                selectedTask={selectedTask}
-                setSelectedTask={setSelectedTask}
-                getStatusColor={getStatusColor}
-                getStatusLabel={getStatusLabel}
-              />
-              <KanbanColumn
-                title="In Progress"
-                count={inProgress.length}
-                tasks={inProgress}
-                statusColor="chart-4"
-                selectedTask={selectedTask}
-                setSelectedTask={setSelectedTask}
-                getStatusColor={getStatusColor}
-                getStatusLabel={getStatusLabel}
-              />
-              <KanbanColumn
-                title="Completed"
-                count={completed.length}
-                tasks={completed}
-                statusColor="chart-2"
-                selectedTask={selectedTask}
-                setSelectedTask={setSelectedTask}
-                getStatusColor={getStatusColor}
-                getStatusLabel={getStatusLabel}
-              />
-            </div>
-
-            {/* Task Detail Slide-in */}
-            {selectedTask && (
-              <div className="w-[350px] bg-sidebar border-l border-border flex flex-col shrink-0">
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                  <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(selectedTask.status)}`}>
-                    {getStatusLabel(selectedTask.status)}
-                  </span>
-                  <button
-                    onClick={() => setSelectedTask(null)}
-                    className="text-muted-foreground hover:text-foreground text-sm"
-                  >
-                    &times;
-                  </button>
-                </div>
-                <ScrollArea className="flex-1">
-                  <div className="p-4 space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground mb-1">
-                        {selectedTask.subject}
-                      </h3>
-                      {selectedTask.status === "in_progress" && selectedTask.activeForm && (
-                        <p className="text-xs text-chart-4 italic">{selectedTask.activeForm}</p>
-                      )}
-                    </div>
-
-                    {selectedTask.description && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-                          Description
-                        </h4>
-                        <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                          {selectedTask.description}
-                        </p>
-                      </div>
-                    )}
-
-                    {selectedTask.blockedBy.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-                          Blocked By
-                        </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTask.blockedBy.map((id) => (
-                            <span key={id} className="text-xs bg-chart-3/20 text-chart-3 px-2 py-0.5 rounded">
-                              Task #{id}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedTask.blocks.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-                          Blocks
-                        </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTask.blocks.map((id) => (
-                            <span key={id} className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                              Task #{id}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t border-border">
-                      <button
-                        onClick={() => handleCopyTaskId(selectedTask.id)}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {copiedTaskId ? (
-                          <><Check className="size-3 text-chart-2" /><span className="text-chart-2">Copied</span></>
-                        ) : (
-                          <><Copy className="size-3" /><span>Copy ID: {selectedTask.id}</span></>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </ScrollArea>
+                <KanbanColumn
+                  title="Pending"
+                  count={pending.length}
+                  tasks={pending}
+                  statusColor="chart-1"
+                  selectedTask={selectedTask}
+                  setSelectedTask={setSelectedTask}
+                  getStatusColor={getStatusColor}
+                  getStatusLabel={getStatusLabel}
+                />
+                <KanbanColumn
+                  title="In Progress"
+                  count={inProgress.length}
+                  tasks={inProgress}
+                  statusColor="chart-4"
+                  selectedTask={selectedTask}
+                  setSelectedTask={setSelectedTask}
+                  getStatusColor={getStatusColor}
+                  getStatusLabel={getStatusLabel}
+                />
+                <KanbanColumn
+                  title="Completed"
+                  count={completed.length}
+                  tasks={completed}
+                  statusColor="chart-2"
+                  selectedTask={selectedTask}
+                  setSelectedTask={setSelectedTask}
+                  getStatusColor={getStatusColor}
+                  getStatusLabel={getStatusLabel}
+                />
               </div>
-            )}
+
+              {/* Task Detail Slide-in */}
+              {selectedTask && (
+                <div className="w-[350px] bg-sidebar border-l border-border flex flex-col shrink-0">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(selectedTask.status)}`}
+                    >
+                      {getStatusLabel(selectedTask.status)}
+                    </span>
+                    <button
+                      onClick={() => setSelectedTask(null)}
+                      className="text-muted-foreground hover:text-foreground text-sm"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">
+                          {selectedTask.subject}
+                        </h3>
+                        {selectedTask.status === "in_progress" &&
+                          selectedTask.activeForm && (
+                            <p className="text-xs text-chart-4 italic">
+                              {selectedTask.activeForm}
+                            </p>
+                          )}
+                      </div>
+
+                      {selectedTask.description && (
+                        <div>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                            Description
+                          </h4>
+                          <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                            {selectedTask.description}
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedTask.blockedBy.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                            Blocked By
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedTask.blockedBy.map((id) => (
+                              <span
+                                key={id}
+                                className="text-xs bg-chart-3/20 text-chart-3 px-2 py-0.5 rounded"
+                              >
+                                Task #{id}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedTask.blocks.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                            Blocks
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedTask.blocks.map((id) => (
+                              <span
+                                key={id}
+                                className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded"
+                              >
+                                Task #{id}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-border">
+                        <button
+                          onClick={() => handleCopyTaskId(selectedTask.id)}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {copiedTaskId ? (
+                            <>
+                              <Check className="size-3 text-chart-2" />
+                              <span className="text-chart-2">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="size-3" />
+                              <span>Copy ID: {selectedTask.id}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-muted-foreground">Select a session from the sidebar</p>
+              <p className="text-muted-foreground">
+                Select a session from the sidebar
+              </p>
             </div>
           </div>
         )}
@@ -761,8 +842,12 @@ function KanbanColumn({
     <div className="flex-1 min-w-[250px] flex flex-col">
       <div className="flex items-center gap-2 mb-3 px-1">
         <div className={`size-2 rounded-full bg-${statusColor}`} />
-        <span className="text-xs font-semibold text-muted-foreground uppercase">{title}</span>
-        <span className="text-xs text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">{count}</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase">
+          {title}
+        </span>
+        <span className="text-xs text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">
+          {count}
+        </span>
       </div>
       <ScrollArea className="flex-1">
         <div className="space-y-2 pr-1">
@@ -777,11 +862,17 @@ function KanbanColumn({
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-muted-foreground font-mono">#{task.id}</span>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  #{task.id}
+                </span>
               </div>
-              <p className="text-sm text-foreground line-clamp-2 mb-1">{task.subject}</p>
+              <p className="text-sm text-foreground line-clamp-2 mb-1">
+                {task.subject}
+              </p>
               {task.status === "in_progress" && task.activeForm && (
-                <p className="text-xs text-chart-4 italic truncate">{task.activeForm}</p>
+                <p className="text-xs text-chart-4 italic truncate">
+                  {task.activeForm}
+                </p>
               )}
               {task.blockedBy.length > 0 && (
                 <div className="flex items-center gap-1 mt-1.5">
@@ -793,7 +884,9 @@ function KanbanColumn({
             </button>
           ))}
           {tasks.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground/40 text-xs">No tasks</div>
+            <div className="text-center py-8 text-muted-foreground/40 text-xs">
+              No tasks
+            </div>
           )}
         </div>
       </ScrollArea>
@@ -834,11 +927,15 @@ function PlanView({
         <div className="max-w-4xl mx-auto">
           <div className="bg-destructive/10 border border-destructive rounded-lg p-6">
             <h2 className="text-xl font-bold text-destructive-foreground mb-4">
-              {data?.queueErrors?.length ? "Queue Parse Errors" : "Plan Mode Not Available"}
+              {data?.queueErrors?.length
+                ? "Queue Parse Errors"
+                : "Plan Mode Not Available"}
             </h2>
             <div className="space-y-2">
               {data?.queueErrors?.map((err, i) => (
-                <div key={i} className="text-destructive-foreground text-sm">{err}</div>
+                <div key={i} className="text-destructive-foreground text-sm">
+                  {err}
+                </div>
               )) || (
                 <div className="text-muted-foreground text-sm">
                   Run &quot;agent-scope init&quot; to set up Plan mode
@@ -875,7 +972,8 @@ function PlanView({
     (acc, task) => {
       if (task.lastEvent) {
         const agent = task.lastEvent.agent;
-        if (!acc[agent]) acc[agent] = { done: 0, failed: 0, totalDuration: 0, taskCount: 0 };
+        if (!acc[agent])
+          acc[agent] = { done: 0, failed: 0, totalDuration: 0, taskCount: 0 };
         acc[agent].taskCount++;
         if (task.lastEvent.status === "DONE") acc[agent].done++;
         if (task.lastEvent.status === "FAILED") acc[agent].failed++;
@@ -884,15 +982,20 @@ function PlanView({
       }
       return acc;
     },
-    {} as Record<string, { done: number; failed: number; totalDuration: number; taskCount: number }>,
+    {} as Record<
+      string,
+      { done: number; failed: number; totalDuration: number; taskCount: number }
+    >,
   );
 
   return (
     <>
       {/* Left Sidebar */}
-      <div className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
-        mounted ? "transition-all duration-300" : ""
-      } ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[25%] min-w-[280px]"}`}>
+      <div
+        className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
+          mounted ? "transition-all duration-300" : ""
+        } ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[25%] min-w-[280px]"}`}
+      >
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-3">
             {Object.entries(tasksBySlice).map(([sliceId, tasks]) => (
@@ -902,11 +1005,18 @@ function PlanView({
                   className="w-full flex items-center justify-between px-2 py-1.5 bg-muted rounded text-xs font-semibold text-muted-foreground hover:bg-muted/80 transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
-                    {expandedSlices.has(sliceId) ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-                    <span>{sliceId} &bull; {tasks.length} tasks</span>
+                    {expandedSlices.has(sliceId) ? (
+                      <ChevronDown className="size-3.5" />
+                    ) : (
+                      <ChevronRight className="size-3.5" />
+                    )}
+                    <span>
+                      {sliceId} &bull; {tasks.length} tasks
+                    </span>
                   </div>
                   <span className="text-muted-foreground/60">
-                    {tasks.filter((t) => t.status === "DONE").length}/{tasks.length}
+                    {tasks.filter((t) => t.status === "DONE").length}/
+                    {tasks.length}
                   </span>
                 </button>
                 {expandedSlices.has(sliceId) &&
@@ -921,14 +1031,22 @@ function PlanView({
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-mono text-foreground">{task.id}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(task.status)}`}>
+                        <span className="text-sm font-mono text-foreground">
+                          {task.id}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(task.status)}`}
+                        >
                           {task.status}
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground line-clamp-2">{task.description}</div>
+                      <div className="text-sm text-muted-foreground line-clamp-2">
+                        {task.description}
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground/60">{task.area}</span>
+                        <span className="text-xs text-muted-foreground/60">
+                          {task.area}
+                        </span>
                         {typeof task.lastEvent?.meta?.commit === "string" && (
                           <span className="flex items-center gap-1 text-[10px] text-chart-4/70 font-mono">
                             <GitCommit className="size-2.5" />
@@ -949,13 +1067,17 @@ function PlanView({
         {selectedTask ? (
           <>
             <div className="bg-sidebar border-b border-border p-6">
-              <h2 className="text-2xl font-semibold text-foreground mb-3">{selectedTask.description}</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-3">
+                {selectedTask.description}
+              </h2>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>Task: {selectedTask.id}</span>
                 <span>&bull;</span>
                 <span>Area: {selectedTask.area}</span>
                 <span>&bull;</span>
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(selectedTask.status)}`}>
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(selectedTask.status)}`}
+                >
                   {selectedTask.status}
                 </span>
                 <div className="flex-1" />
@@ -964,9 +1086,15 @@ function PlanView({
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-accent transition-colors"
                 >
                   {copiedTaskId ? (
-                    <><Check className="size-3.5 text-chart-2" /><span className="text-chart-2">Copied</span></>
+                    <>
+                      <Check className="size-3.5 text-chart-2" />
+                      <span className="text-chart-2">Copied</span>
+                    </>
                   ) : (
-                    <><Copy className="size-3.5" /><span>Copy ID</span></>
+                    <>
+                      <Copy className="size-3.5" />
+                      <span>Copy ID</span>
+                    </>
                   )}
                 </button>
               </div>
@@ -976,31 +1104,47 @@ function PlanView({
               {/* Details */}
               <div className="w-1/2 border-r border-border flex flex-col">
                 <div className="bg-sidebar border-b border-border px-4 py-2">
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Task Details</h3>
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Task Details
+                  </h3>
                 </div>
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-6">
                     <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Acceptance Criteria</h4>
-                      <p className="text-sm text-foreground/80 leading-relaxed">{selectedTask.acceptanceCriteria}</p>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                        Acceptance Criteria
+                      </h4>
+                      <p className="text-sm text-foreground/80 leading-relaxed">
+                        {selectedTask.acceptanceCriteria}
+                      </p>
                     </div>
 
                     {selectedTask.dependsOn.length > 0 && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Dependencies</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                          Dependencies
+                        </h4>
                         <div className="space-y-2">
                           {selectedTask.dependsOn.map((depId) => {
-                            const depTask = snapshot.tasks.find((t) => t.id === depId);
+                            const depTask = snapshot.tasks.find(
+                              (t) => t.id === depId,
+                            );
                             return (
                               <button
                                 key={depId}
-                                onClick={() => depTask && setSelectedTask(depTask)}
+                                onClick={() =>
+                                  depTask && setSelectedTask(depTask)
+                                }
                                 className="w-full text-left p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors"
                               >
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-mono text-foreground">{depId}</span>
+                                  <span className="text-sm font-mono text-foreground">
+                                    {depId}
+                                  </span>
                                   {depTask && (
-                                    <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(depTask.status)}`}>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(depTask.status)}`}
+                                    >
                                       {depTask.status}
                                     </span>
                                   )}
@@ -1014,7 +1158,9 @@ function PlanView({
 
                     {getDependentTasks(selectedTask.id).length > 0 && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Blocks These Tasks</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                          Blocks These Tasks
+                        </h4>
                         <div className="space-y-2">
                           {getDependentTasks(selectedTask.id).map((task) => (
                             <button
@@ -1023,8 +1169,12 @@ function PlanView({
                               className="w-full text-left p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-mono text-foreground">{task.id}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(task.status)}`}>
+                                <span className="text-sm font-mono text-foreground">
+                                  {task.id}
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded font-semibold ${getStatusColor(task.status)}`}
+                                >
                                   {task.status}
                                 </span>
                               </div>
@@ -1036,17 +1186,25 @@ function PlanView({
 
                     {selectedTask.lastEvent && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Execution</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                          Execution
+                        </h4>
                         <div className="bg-card rounded-lg p-4 space-y-3 text-sm border border-border">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-foreground font-mono">{selectedTask.lastEvent.agent}</span>
-                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getStatusColor(selectedTask.lastEvent.status)}`}>
+                              <span className="text-foreground font-mono">
+                                {selectedTask.lastEvent.agent}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-semibold ${getStatusColor(selectedTask.lastEvent.status)}`}
+                              >
                                 {selectedTask.lastEvent.status}
                               </span>
                             </div>
                             <span className="text-muted-foreground text-xs">
-                              {new Date(selectedTask.lastEvent.timestamp).toLocaleString()}
+                              {new Date(
+                                selectedTask.lastEvent.timestamp,
+                              ).toLocaleString()}
                             </span>
                           </div>
 
@@ -1062,55 +1220,97 @@ function PlanView({
                                 <Clock className="size-3" />
                                 {String(selectedTask.lastEvent.meta.duration)}s
                               </span>
-                              {selectedTask.lastEvent.meta.stepCount != null && (
-                                <span>{String(selectedTask.lastEvent.meta.stepCount)} steps</span>
+                              {selectedTask.lastEvent.meta.stepCount !=
+                                null && (
+                                <span>
+                                  {String(
+                                    selectedTask.lastEvent.meta.stepCount,
+                                  )}{" "}
+                                  steps
+                                </span>
                               )}
                             </div>
                           )}
 
-                          {typeof selectedTask.lastEvent.meta?.commit === "string" && (
+                          {typeof selectedTask.lastEvent.meta?.commit ===
+                            "string" && (
                             <div className="flex items-center gap-2 px-3 py-2 bg-background rounded-md">
                               <GitCommit className="size-3.5 text-chart-4 shrink-0" />
                               <code className="text-xs text-chart-4 font-mono">
-                                {String(selectedTask.lastEvent.meta.commit).slice(0, 7)}
+                                {String(
+                                  selectedTask.lastEvent.meta.commit,
+                                ).slice(0, 7)}
                               </code>
                               <span className="text-xs text-muted-foreground truncate">
-                                {String(selectedTask.lastEvent.meta.commitMsg || "")}
+                                {String(
+                                  selectedTask.lastEvent.meta.commitMsg || "",
+                                )}
                               </span>
                             </div>
                           )}
 
-                          {Array.isArray(selectedTask.lastEvent.meta?.steps) && (
+                          {Array.isArray(
+                            selectedTask.lastEvent.meta?.steps,
+                          ) && (
                             <div className="mt-2 pt-3 border-t border-border space-y-1">
-                              {(selectedTask.lastEvent.meta.steps as Array<{ type: string; name: string; summary: string; duration: number }>).map(
-                                (step, i) => (
-                                  <div key={i} className="flex items-start gap-2 py-1.5 px-2 rounded hover:bg-background/50">
-                                    <div className="mt-0.5">
-                                      {step.type === "thought" && <Brain className="size-3.5 text-chart-4" />}
-                                      {step.type === "tool_call" && <Wrench className="size-3.5 text-chart-1" />}
-                                      {step.type === "observation" && <Eye className="size-3.5 text-chart-2" />}
-                                      {step.type === "error" && <AlertCircle className="size-3.5 text-chart-5" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="text-xs font-medium text-foreground truncate">{step.name}</span>
-                                        <span className="text-[10px] text-muted-foreground/60 shrink-0">{step.duration}ms</span>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground/80 truncate">{step.summary}</p>
-                                    </div>
+                              {(
+                                selectedTask.lastEvent.meta.steps as Array<{
+                                  type: string;
+                                  name: string;
+                                  summary: string;
+                                  duration: number;
+                                }>
+                              ).map((step, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-start gap-2 py-1.5 px-2 rounded hover:bg-background/50"
+                                >
+                                  <div className="mt-0.5">
+                                    {step.type === "thought" && (
+                                      <Brain className="size-3.5 text-chart-4" />
+                                    )}
+                                    {step.type === "tool_call" && (
+                                      <Wrench className="size-3.5 text-chart-1" />
+                                    )}
+                                    {step.type === "observation" && (
+                                      <Eye className="size-3.5 text-chart-2" />
+                                    )}
+                                    {step.type === "error" && (
+                                      <AlertCircle className="size-3.5 text-chart-5" />
+                                    )}
                                   </div>
-                                ),
-                              )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-medium text-foreground truncate">
+                                        {step.name}
+                                      </span>
+                                      <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                                        {step.duration}ms
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground/80 truncate">
+                                      {step.summary}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
 
-                          {selectedTask.lastEvent.meta && !Array.isArray(selectedTask.lastEvent.meta.steps) && (
-                            <div className="mt-2 pt-3 border-t border-border">
-                              <pre className="text-xs text-muted-foreground bg-background p-2 rounded overflow-auto">
-                                {JSON.stringify(selectedTask.lastEvent.meta, null, 2)}
-                              </pre>
-                            </div>
-                          )}
+                          {selectedTask.lastEvent.meta &&
+                            !Array.isArray(
+                              selectedTask.lastEvent.meta.steps,
+                            ) && (
+                              <div className="mt-2 pt-3 border-t border-border">
+                                <pre className="text-xs text-muted-foreground bg-background p-2 rounded overflow-auto">
+                                  {JSON.stringify(
+                                    selectedTask.lastEvent.meta,
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
+                            )}
                         </div>
                       </div>
                     )}
@@ -1121,80 +1321,139 @@ function PlanView({
               {/* Overview */}
               <div className="w-1/2 flex flex-col">
                 <div className="bg-sidebar border-b border-border px-4 py-2">
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Overview</h3>
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Overview
+                  </h3>
                 </div>
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-6">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-card border border-border rounded-lg p-4">
-                        <div className="text-2xl font-bold text-foreground">{snapshot.summary.total}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Total Tasks</div>
+                        <div className="text-2xl font-bold text-foreground">
+                          {snapshot.summary.total}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Total Tasks
+                        </div>
                       </div>
                       <div className="bg-card border border-chart-2/30 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-chart-2">{snapshot.summary.done}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Done</div>
+                        <div className="text-2xl font-bold text-chart-2">
+                          {snapshot.summary.done}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Done
+                        </div>
                       </div>
                       <div className="bg-card border border-chart-5/30 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-chart-5">{snapshot.summary.failed}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Failed</div>
+                        <div className="text-2xl font-bold text-chart-5">
+                          {snapshot.summary.failed}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Failed
+                        </div>
                       </div>
                       <div className="bg-card border border-chart-3/30 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-chart-3">{snapshot.summary.blocked}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Blocked</div>
+                        <div className="text-2xl font-bold text-chart-3">
+                          {snapshot.summary.blocked}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Blocked
+                        </div>
                       </div>
                       <div className="bg-card border border-chart-1/30 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-chart-1">{snapshot.summary.ready}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Ready</div>
+                        <div className="text-2xl font-bold text-chart-1">
+                          {snapshot.summary.ready}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Ready
+                        </div>
                       </div>
                       <div className="bg-card border border-border rounded-lg p-4">
                         <div className="text-2xl font-bold text-foreground">
                           {Math.round(snapshot.summary.successRate * 100)}%
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">Success Rate</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Success Rate
+                        </div>
                       </div>
                     </div>
 
                     <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Slice Progress</h4>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">
+                        Slice Progress
+                      </h4>
                       <div className="space-y-3">
-                        {Object.entries(snapshot.slices).map(([sliceId, slice]) => (
-                          <div key={sliceId} className="bg-card border border-border rounded-lg p-4">
-                            <div className="flex justify-between mb-2">
-                              <span className="font-semibold text-foreground">{sliceId}</span>
-                              <span className="text-muted-foreground text-sm">
-                                {slice.done}/{slice.total} ({slice.progress}%)
-                              </span>
+                        {Object.entries(snapshot.slices).map(
+                          ([sliceId, slice]) => (
+                            <div
+                              key={sliceId}
+                              className="bg-card border border-border rounded-lg p-4"
+                            >
+                              <div className="flex justify-between mb-2">
+                                <span className="font-semibold text-foreground">
+                                  {sliceId}
+                                </span>
+                                <span className="text-muted-foreground text-sm">
+                                  {slice.done}/{slice.total} ({slice.progress}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div
+                                  className="bg-chart-2 h-2 rounded-full transition-all"
+                                  style={{ width: `${slice.progress}%` }}
+                                />
+                              </div>
+                              <div className="flex gap-4 mt-3 text-xs">
+                                <span className="text-chart-2">
+                                  Done: {slice.done}
+                                </span>
+                                <span className="text-chart-5">
+                                  Failed: {slice.failed}
+                                </span>
+                                <span className="text-chart-3">
+                                  Blocked: {slice.blocked}
+                                </span>
+                                <span className="text-chart-1">
+                                  Ready: {slice.ready}
+                                </span>
+                              </div>
                             </div>
-                            <div className="w-full bg-muted rounded-full h-2">
-                              <div className="bg-chart-2 h-2 rounded-full transition-all" style={{ width: `${slice.progress}%` }} />
-                            </div>
-                            <div className="flex gap-4 mt-3 text-xs">
-                              <span className="text-chart-2">Done: {slice.done}</span>
-                              <span className="text-chart-5">Failed: {slice.failed}</span>
-                              <span className="text-chart-3">Blocked: {slice.blocked}</span>
-                              <span className="text-chart-1">Ready: {slice.ready}</span>
-                            </div>
-                          </div>
-                        ))}
+                          ),
+                        )}
                       </div>
                     </div>
 
                     {Object.keys(agentStats).length > 0 && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Agent Activity</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-3">
+                          Agent Activity
+                        </h4>
                         <div className="space-y-2">
                           {Object.entries(agentStats).map(([agent, stats]) => (
-                            <div key={agent} className="bg-card border border-border rounded-lg p-4">
+                            <div
+                              key={agent}
+                              className="bg-card border border-border rounded-lg p-4"
+                            >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <Bot className="size-4 text-chart-4" />
-                                  <span className="font-mono text-sm text-foreground">{agent}</span>
+                                  <span className="font-mono text-sm text-foreground">
+                                    {agent}
+                                  </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">{stats.taskCount} tasks</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {stats.taskCount} tasks
+                                </span>
                               </div>
                               <div className="flex gap-3 text-xs">
-                                <span className="text-chart-2">{stats.done} done</span>
-                                {stats.failed > 0 && <span className="text-chart-5">{stats.failed} failed</span>}
+                                <span className="text-chart-2">
+                                  {stats.done} done
+                                </span>
+                                {stats.failed > 0 && (
+                                  <span className="text-chart-5">
+                                    {stats.failed} failed
+                                  </span>
+                                )}
                                 {stats.totalDuration > 0 && (
                                   <span className="text-muted-foreground flex items-center gap-1">
                                     <Clock className="size-3" />
@@ -1284,123 +1543,6 @@ function InsightsView({ data }: { data: InsightsResponse | null }) {
             title="Claude Code Insights Report"
           />
         </div>
-
-        {/* Live Mode Insights */}
-        {live && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2">
-              <Radio className="size-5" />
-              <h2 className="text-2xl font-semibold">Live Mode Analytics</h2>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Sessions</span>
-                  <Bot className="size-4 text-muted-foreground" />
-                </div>
-                <div className="text-2xl font-bold">{live.summary.totalSessions}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {live.summary.activeSessions} active
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Total Tasks</span>
-                  <FileText className="size-4 text-muted-foreground" />
-                </div>
-                <div className="text-2xl font-bold">{live.summary.totalTasks}</div>
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Completed</span>
-                  <Check className="size-4 text-chart-2" />
-                </div>
-                <div className="text-2xl font-bold text-chart-2">
-                  {live.summary.completedTasks}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {live.summary.inProgressTasks} in progress
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Token Usage</span>
-                  <Brain className="size-4 text-muted-foreground" />
-                </div>
-                <div className="text-2xl font-bold">
-                  {(live.tokenUsage.total / 1000).toFixed(1)}K
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">total tokens</div>
-              </div>
-            </div>
-
-            {/* Token Usage Breakdown */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">Token Distribution</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground">Input</div>
-                  <div className="text-xl font-semibold">
-                    {(live.tokenUsage.input / 1000).toFixed(1)}K
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Output</div>
-                  <div className="text-xl font-semibold">
-                    {(live.tokenUsage.output / 1000).toFixed(1)}K
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Cache Creation</div>
-                  <div className="text-xl font-semibold">
-                    {(live.tokenUsage.cacheCreation / 1000).toFixed(1)}K
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Cache Read</div>
-                  <div className="text-xl font-semibold">
-                    {(live.tokenUsage.cacheRead / 1000).toFixed(1)}K
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Sessions */}
-            {live.topSessions.length > 0 && (
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Most Active Sessions</h3>
-                <div className="space-y-3">
-                  {live.topSessions.map((session, index) => (
-                    <div
-                      key={session.id}
-                      className="flex items-center gap-3 p-3 bg-muted rounded-lg"
-                    >
-                      <div className="size-8 rounded-full bg-chart-1 text-chart-1-foreground flex items-center justify-center font-semibold">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {session.projectName || session.id.slice(0, 12)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {session.taskCount} tasks ({session.completedCount} completed)
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(session.lastActivity).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
