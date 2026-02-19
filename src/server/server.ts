@@ -16,10 +16,11 @@ export interface ServerOptions {
   agentScopeDir?: string;
   claudeDir: string;
   port: number;
+  host?: string;
 }
 
 export async function startServer(options: ServerOptions): Promise<void> {
-  const { claudeDir, port, agentScopeDir } = options;
+  const { claudeDir, port, agentScopeDir, host = '127.0.0.1' } = options;
 
   const fastify = Fastify({ logger: false, ignoreTrailingSlash: true });
 
@@ -47,7 +48,7 @@ export async function startServer(options: ServerOptions): Promise<void> {
   }
 
   try {
-    await fastify.listen({ port, host: '0.0.0.0' });
+    await fastify.listen({ port, host });
   } catch (err) {
     fastify.log.error(err);
     throw err;

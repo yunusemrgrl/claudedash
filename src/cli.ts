@@ -200,6 +200,7 @@ program
   .description('Start the claudedash server and dashboard')
   .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
   .option('-p, --port <number>', 'Port number', '4317')
+  .option('--host <host>', 'Bind host', '127.0.0.1')
   .action(async (opts) => {
     const claudeDir = opts.claudeDir;
     const claudeWatchDir = join(process.cwd(), '.claudedash');
@@ -232,12 +233,19 @@ program
       }
     }
 
-    const url = `http://localhost:${port}`;
+    const host = opts.host as string;
+    const isLocalhost = host === '127.0.0.1' || host === 'localhost' || host === '::1';
+    const url = `http://${isLocalhost ? 'localhost' : host}:${port}`;
+
+    if (!isLocalhost) {
+      console.log(`⚠️  Server exposed to network on ${host}:${port}`);
+    }
 
     try {
       await startServer({
         claudeDir,
         port,
+        host,
         agentScopeDir: hasPlan ? claudeWatchDir : undefined
       });
 

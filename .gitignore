@@ -17,3 +17,4 @@ brief.md
 dashboard/next-env.d.ts
 docs/dev-log.md
 *.png
+.claudedash/execution.log
