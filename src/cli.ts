@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('claude-watch')
   .description('Live Kanban, quality gates and context health monitoring for Claude Code agents')
-  .version('0.5.2');
+  .version('0.5.3');
 
 program
   .command('init')

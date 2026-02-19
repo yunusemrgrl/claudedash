@@ -1,6 +1,6 @@
 {
   "name": "claude-watch",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Live Kanban, quality gates and context health monitoring for Claude Code agents",
   "type": "module",
   "bin": {
