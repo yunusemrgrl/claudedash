@@ -1,4 +1,4 @@
-/* agent-scope landing page — anime.js animations */
+/* claude-watch landing page — anime.js animations */
 
 'use strict';
 
@@ -253,7 +253,7 @@ function initCopyButtons() {
 
     btn.addEventListener('click', async () => {
       const textEl = $(textSel);
-      const ok = await copyText('npx -y agent-scope@latest start', textEl, 'copied! ✓');
+      const ok = await copyText('npx -y claude-watch@latest start', textEl, 'copied! ✓');
       if (ok) {
         anime({
           targets: btn,
@@ -271,14 +271,14 @@ function initCopyButtons() {
     termBtn.addEventListener('click', () => {
       const code = [
         '# Zero-install — always gets the latest version',
-        'npx -y agent-scope@latest start',
+        'npx -y claude-watch@latest start',
         '',
         '# Or install globally',
-        'npm install -g agent-scope',
-        'agent-scope start',
+        'npm install -g claude-watch',
+        'claude-watch start',
         '',
         '# Custom project path',
-        'agent-scope start --claude-dir ~/my-project/.claude',
+        'claude-watch start --claude-dir ~/my-project/.claude',
       ].join('\n');
 
       copyText(code, termBtn, 'copied! ✓');

@@ -1,10 +1,10 @@
 {
-  "name": "agent-scope",
+  "name": "claude-watch",
   "version": "0.5.2",
-  "description": "Deterministic, local, passive execution observer for AI agent workflows",
+  "description": "Live Kanban, quality gates and context health monitoring for Claude Code agents",
   "type": "module",
   "bin": {
-    "agent-scope": "dist/cli.js"
+    "claude-watch": "dist/cli.js"
   },
   "files": [
     "dist/",
@@ -21,25 +21,25 @@
     "version": "node scripts/sync-version.mjs && git add dashboard/package.json src/cli.ts"
   },
   "keywords": [
-    "agent",
-    "observer",
-    "workflow",
-    "ai",
+    "claude",
+    "claude-code",
+    "ai-agent",
     "monitoring",
+    "observability",
+    "kanban",
     "task-tracking",
-    "ai-agents",
-    "execution-observer",
-    "workflow-management"
+    "dashboard",
+    "devtools"
   ],
   "author": "Yunus Emre Gurlu <yunusemregurlu@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yunusemrgrl/agent-scope.git"
+    "url": "git+https://github.com/yunusemrgrl/claude-watch.git"
   },
   "bugs": {
-    "url": "https://github.com/yunusemrgrl/agent-scope/issues"
+    "url": "https://github.com/yunusemrgrl/claude-watch/issues"
   },
-  "homepage": "https://github.com/yunusemrgrl/agent-scope#readme",
+  "homepage": "https://github.com/yunusemrgrl/claude-watch#readme",
   "license": "MIT",
   "dependencies": {
     "@fastify/cors": "^9.0.1",
