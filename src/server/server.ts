@@ -24,7 +24,19 @@ export async function startServer(options: ServerOptions): Promise<void> {
 
   const fastify = Fastify({ logger: false, ignoreTrailingSlash: true });
 
-  await fastify.register(cors, { origin: true });
+  const allowedOrigins = [
+    `http://localhost:${port}`,
+    `http://127.0.0.1:${port}`,
+  ];
+  await fastify.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Not allowed by CORS'), false);
+      }
+    },
+  });
 
   const { watcher, emitter } = createWatcher({ claudeDir, agentScopeDir });
 
