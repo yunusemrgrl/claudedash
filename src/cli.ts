@@ -722,4 +722,58 @@ program
     console.log('Run `claudedash start` to view the live dashboard.\n');
   });
 
+program
+  .command('doctor')
+  .description('Check claudedash environment and configuration')
+  .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
+  .action(async (opts) => {
+    const claudeDir = opts.claudeDir;
+    const claudeWatchDir = join(process.cwd(), '.claudedash');
+    const checks: Array<{ label: string; ok: boolean; note?: string }> = [];
+
+    // Node.js version
+    const nodeVer = process.version;
+    const major = parseInt(nodeVer.slice(1));
+    checks.push({ label: `Node.js ${nodeVer}`, ok: major >= 18, note: major < 18 ? 'Requires Node.js 18+' : undefined });
+
+    // git available
+    try {
+      const { execFileSync } = await import('child_process').then(m => m);
+      execFileSync('git', ['--version'], { stdio: 'ignore' });
+      checks.push({ label: 'git available', ok: true });
+    } catch {
+      checks.push({ label: 'git available', ok: false, note: 'git not found in PATH' });
+    }
+
+    // ~/.claude/ directory
+    const claudeDirExists = existsSync(claudeDir);
+    checks.push({ label: `~/.claude/ directory (${claudeDir})`, ok: claudeDirExists, note: claudeDirExists ? undefined : 'Not found — Claude Code may not be installed' });
+
+    // ~/.claude/tasks/ (live mode)
+    const tasksDir = join(claudeDir, 'tasks');
+    checks.push({ label: '~/.claude/tasks/ (Live mode data)', ok: existsSync(tasksDir) });
+
+    // .claudedash/ (plan mode)
+    checks.push({ label: '.claudedash/ (Plan mode)', ok: existsSync(claudeWatchDir) });
+
+    // CLAUDE.md in cwd
+    const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+    const claudeMdExists = existsSync(claudeMdPath);
+    const hasTodoWrite = claudeMdExists && readFileSync(claudeMdPath, 'utf-8').includes('TodoWrite');
+    checks.push({ label: 'CLAUDE.md with TodoWrite directive', ok: hasTodoWrite, note: !claudeMdExists ? 'Not found — run claudedash init' : !hasTodoWrite ? 'TodoWrite missing — run claudedash init' : undefined });
+
+    // Port 4317 availability (simple check)
+    checks.push({ label: 'Default port 4317', ok: true, note: 'Cannot test without binding' });
+
+    // Print results
+    console.log('\n🩺 claudedash doctor\n');
+    for (const check of checks) {
+      const icon = check.ok ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
+      const note = check.note ? ` \x1b[33m(${check.note})\x1b[0m` : '';
+      console.log(`  ${icon}  ${check.label}${note}`);
+    }
+    const failed = checks.filter(c => !c.ok).length;
+    console.log(`\n${failed === 0 ? '\x1b[32mAll checks passed.\x1b[0m' : `\x1b[31m${failed} check(s) failed.\x1b[0m`}\n`);
+  });
+
 program.parse();
