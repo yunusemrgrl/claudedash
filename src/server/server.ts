@@ -18,10 +18,11 @@ export interface ServerOptions {
   claudeDir: string;
   port: number;
   host?: string;
+  token?: string;
 }
 
 export async function startServer(options: ServerOptions): Promise<void> {
-  const { claudeDir, port, agentScopeDir, host = '127.0.0.1' } = options;
+  const { claudeDir, port, agentScopeDir, host = '127.0.0.1', token } = options;
 
   const fastify = Fastify({ logger: false, ignoreTrailingSlash: true });
 
@@ -50,6 +51,26 @@ export async function startServer(options: ServerOptions): Promise<void> {
       }
     },
   });
+
+  // Token auth middleware — protect all API endpoints when token is set
+  if (token) {
+    fastify.addHook('onRequest', async (request, reply) => {
+      // Static assets and dashboard HTML pass through
+      const url = request.url.split('?')[0];
+      const isApi = !url.match(/\.(html|js|css|png|svg|ico|woff2?)$/) && url !== '/';
+      if (!isApi) return;
+
+      const authHeader = request.headers['authorization'];
+      const queryToken = (request.query as Record<string, string>)['token'];
+      const provided = authHeader?.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : queryToken;
+
+      if (provided !== token) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+    });
+  }
 
   const { watcher, emitter } = createWatcher({ claudeDir, agentScopeDir });
 

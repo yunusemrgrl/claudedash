@@ -380,6 +380,7 @@ program
   .option('-p, --port <number>', 'Port number', '4317')
   .option('--host <host>', 'Bind host', '127.0.0.1')
   .option('--no-bell', 'Disable terminal bell on task alerts')
+  .option('--token <secret>', 'Require Bearer token for all API requests (reads CLAUDEDASH_TOKEN env var if not provided)')
   .action(async (opts) => {
     const claudeDir = opts.claudeDir;
     const claudeWatchDir = join(process.cwd(), '.claudedash');
@@ -420,12 +421,16 @@ program
       console.log(`⚠️  Server exposed to network on ${host}:${port}`);
     }
 
+    const token = (opts.token as string | undefined) ?? process.env.CLAUDEDASH_TOKEN;
+    if (token) console.log('🔒 Token authentication enabled');
+
     try {
       await startServer({
         claudeDir,
         port,
         host,
-        agentScopeDir: hasPlan ? claudeWatchDir : undefined
+        agentScopeDir: hasPlan ? claudeWatchDir : undefined,
+        token,
       });
 
       console.log(`✓ Server running on ${url}`);
