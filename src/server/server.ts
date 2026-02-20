@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import staticPlugin from '@fastify/static';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -23,6 +24,18 @@ export async function startServer(options: ServerOptions): Promise<void> {
   const { claudeDir, port, agentScopeDir, host = '127.0.0.1' } = options;
 
   const fastify = Fastify({ logger: false, ignoreTrailingSlash: true });
+
+  await fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+    allowList: ['127.0.0.1', '::1'],
+    addHeaders: {
+      'x-ratelimit-limit': true,
+      'x-ratelimit-remaining': true,
+      'x-ratelimit-reset': true,
+      'retry-after': true,
+    },
+  });
 
   const allowedOrigins = [
     `http://localhost:${port}`,
