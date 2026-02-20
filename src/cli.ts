@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync, statSync, watch } from 'fs';
 import { join } from 'path';
 import { execFile } from 'child_process';
 import { startServer } from './server/server.js';
@@ -362,6 +362,7 @@ program
   .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
   .option('-p, --port <number>', 'Port number', '4317')
   .option('--host <host>', 'Bind host', '127.0.0.1')
+  .option('--no-bell', 'Disable terminal bell on task alerts')
   .action(async (opts) => {
     const claudeDir = opts.claudeDir;
     const claudeWatchDir = join(process.cwd(), '.claudedash');
@@ -425,6 +426,37 @@ program
           console.log('Could not auto-open browser. Please visit:', url);
         }
       });
+
+      // Watch execution.log for FAILED/BLOCKED events and alert in terminal
+      if (hasPlan) {
+        const logPath = join(claudeWatchDir, 'execution.log');
+        const useBell = opts.bell !== false;
+        let lastSize = existsSync(logPath) ? statSync(logPath).size : 0;
+
+        watch(logPath, () => {
+          try {
+            if (!existsSync(logPath)) return;
+            const currentSize = statSync(logPath).size;
+            if (currentSize <= lastSize) return;
+            const content = readFileSync(logPath, 'utf-8');
+            const newContent = content.slice(lastSize);
+            lastSize = currentSize;
+            for (const line of newContent.split('\n').filter(Boolean)) {
+              try {
+                const event = JSON.parse(line) as Record<string, unknown>;
+                if (event.status === 'FAILED') {
+                  if (useBell) process.stdout.write('\u0007');
+                  console.error(`\x1b[31m⚠  TASK FAILED: ${event.task_id}\x1b[0m`);
+                } else if (event.status === 'BLOCKED') {
+                  if (useBell) process.stdout.write('\u0007');
+                  const reason = event.reason ? ` — ${String(event.reason)}` : '';
+                  console.warn(`\x1b[33m⚠  TASK BLOCKED: ${event.task_id}${reason}\x1b[0m`);
+                }
+              } catch { /* skip malformed lines */ }
+            }
+          } catch { /* skip watch errors */ }
+        });
+      }
     } catch (error) {
       console.error('❌ Failed to start server:', error);
       process.exit(1);
