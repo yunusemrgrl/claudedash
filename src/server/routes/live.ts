@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { readSessions } from '../../core/todoReader.js';
 import { buildContextHealth } from '../../core/contextHealth.js';
@@ -59,11 +59,28 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
     await new Promise(() => {});
   });
 
+  // Read session-meta enrichment data if available
+  function readSessionMeta(sessionId: string): { linesAdded?: number; gitCommits?: number; languages?: Record<string, number>; durationMinutes?: number } | null {
+    const metaPath = join(claudeDir, 'usage-data', 'session-meta', `${sessionId}.json`);
+    if (!existsSync(metaPath)) return null;
+    try {
+      const raw = readFileSync(metaPath, 'utf8');
+      const m = JSON.parse(raw) as Record<string, unknown>;
+      return {
+        linesAdded: typeof m.lines_added === 'number' ? m.lines_added : undefined,
+        gitCommits: typeof m.git_commits === 'number' ? m.git_commits : undefined,
+        languages: m.languages && typeof m.languages === 'object' ? m.languages as Record<string, number> : undefined,
+        durationMinutes: typeof m.duration_minutes === 'number' ? m.duration_minutes : undefined,
+      };
+    } catch { return null; }
+  }
+
   fastify.get<{ Querystring: { model?: string } }>('/sessions', async (request) => {
     const model = request.query.model;
     const sessions = readSessions(claudeDir).map(s => ({
       ...s,
       contextHealth: buildContextHealth(s, model),
+      ...readSessionMeta(s.id),
     }));
     return { sessions };
   });

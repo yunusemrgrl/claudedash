@@ -1,72 +1,54 @@
-# Slice S1 — Plan Mode UX: Add Task + Kanban Toggle
+# Slice S1 — Activity Stats: Real Usage Data
 
 ## S1-T1
-Area: Dashboard
+Area: Server
 Priority: critical
 Depends: -
-Description: Plan sidebar'ında "+ Add Task" butonunu en üste taşı (şu an en altta). Sidebar header'ının hemen altına, slice listesinin üstüne yerleştir. Formun davranışı aynı kalacak, sadece konum değişiyor.
-AC: "+ Add Task" butonu Plan sidebar'ında en üstte görünür. Form açılınca input otomatik focus alır.
+Description: `/usage` endpoint'ini gerçek verilerle besle. `~/.claude/stats-cache.json` dosyasını oku (varsa). Döndür: totalSessions, totalMessages, modelUsage (inputTokens, outputTokens, cacheReadInputTokens by model), dailyActivity (son 7 gün: date, messageCount, sessionCount, toolCallCount), hourCounts, firstSessionDate, longestSession. Bu veri her zaman mevcut (dosya Claude Code tarafından yazılıyor). Dosya yoksa 404 dön.
+AC: `curl http://localhost:4317/usage` gerçek stats-cache.json verisini döndürüyor. dailyActivity, modelUsage, totalMessages alanları mevcut.
 
 ## S1-T2
-Area: Dashboard
+Area: Server
 Priority: high
 Depends: S1-T1
-Description: Plan Mode'a Kanban/Liste görünüm toggle'ı ekle. Header alanına List/Kanban switch butonu koy. Kanban görünümde tasklar READY/IN_PROGRESS/DONE/BLOCKED sütunlarına dağılır (LiveView'daki KanbanColumn bileşenine benzer). Liste görünümü mevcut slice-tree yapısı. State localStorage'da saklansın.
-AC: Toggle ile iki görünüm arası geçiş yapılabiliyor. Kanban'da 4 sütun var (READY, IN_PROGRESS, DONE, BLOCKED). Seçim sayfa yenilemede korunuyor.
+Description: `GET /activity/sessions` endpoint ekle. `~/.claude/usage-data/session-meta/` klasöründeki tüm JSON dosyalarını oku. Her biri: session_id, project_path, start_time, duration_minutes, user_message_count, tool_counts, languages, git_commits, input_tokens, output_tokens, lines_added içeriyor. Son 20 session'ı start_time'a göre sıralayıp döndür.
+AC: `curl http://localhost:4317/activity/sessions` session listesi döndürüyor. Her session'da proje adı, süre, mesaj sayısı, token bilgisi var.
 
-# Slice S2 — Plan Mode Task Detail Yeniden Tasarımı
+## S1-T3
+Area: Dashboard
+Priority: critical
+Depends: S1-T1
+Description: Top bar'daki usage widget'ını gerçek veriyle güncelle. Şu an widget hep gizli çünkü `usage.json` yok. Yeni `/usage` endpoint'i (stats-cache.json) gerçek veri döndürdüğünden widget artık görünür olacak. Widget: "14.7K msgs · 37 sessions" formatında bugün değil toplam göstersin. Hover tooltip'te: model breakdown (Sonnet/Opus), dailyActivity son 7 gün özeti, firstSessionDate.
+AC: Top bar'da her zaman kullanım özeti görünüyor. Tooltip'te model bazında token breakdown var.
+
+# Slice S2 — Activity View (Yeni Tab)
 
 ## S2-T1
 Area: Dashboard
 Priority: critical
-Depends: -
-Description: Plan modda taska tıklayınca açılan detail panel'i kaldır. Bunun yerine sağ tarafta her zaman görünür sabit bir "Task Detail" panel yap (selectedTask null ise boş/placeholder göster). Panel genişliği 380px, sol tarafta sidebar + kanban, sağda sabit detail panel. Mevcut detail içeriği (description, AC, deps, quality timeline, agent stats) korunacak ama daha iyi bir layout ile.
-AC: Taska tıklayınca sayfa layout'u değişmiyor. Detail panel her zaman görünür durumda. Seçili task yoksa "Select a task to view details" placeholder gösteriyor.
+Depends: S1-T1, S1-T2
+Description: Dashboard'a "Activity" sekmesi ekle (Radio/ClipboardList/GitBranch'in yanına, BarChart2 ikonu). Bu view: (1) Summary cards: Total Sessions, Total Messages, Lines Added, Git Commits — tüm zamanlar. (2) Son 7 günün bar chart'ı: her gün için messageCount çubuğu (CSS ile, kütüphane olmadan). (3) Model kullanım tablosu: model adı, input tokens, output tokens, cache read tokens. (4) Peak hours: 24 saat için hourCounts'tan activity heatmap (inline CSS ile 24 kutucuk).
+AC: Activity sekmesi açılınca veriler yükleniyor. 4 summary card, 7 günlük bar chart, model tablosu ve hour heatmap görünüyor. Tüm veri `/usage` endpoint'inden geliyor.
 
 ## S2-T2
 Area: Dashboard
 Priority: high
-Depends: S2-T1
-Description: Task detail panel içeriğini yeniden düzenle. Üstte task ID + status badge + priority. Ortada description ve AC scrollable alan. Altta quality timeline compact halde. Agent/timing bilgileri küçük badge'ler olarak header'da gösterilsin. "Mark Done" ve "Block" aksiyonları her zaman görünür olsun, tooltip ile.
-AC: Detail panel kompakt ama bilgi yoğun. Scroll gerekmeden kritik bilgiler (id, status, description, AC) görünüyor. Quality ve agent bilgileri ikincil konumda.
+Depends: S2-T1, S1-T2
+Description: Activity view'a "Recent Sessions" bölümü ekle. `/activity/sessions` endpoint'inden son 10 session'ı göster. Her satır: proje adı (project_path'ten basename), süre, mesaj sayısı, dil listesi (ilk 3), git commits. Satıra tıklayınca expanded detay: tool_counts breakdown, lines_added, ilk prompt (kırpılmış).
+AC: Son sessionlar tablo/liste halinde görünüyor. Her session satırı tıklanabilir ve detayları açıyor.
 
-# Slice S3 — Worktrees Yeniden Tasarımı
+# Slice S3 — Live View Session Zenginleştirme
 
 ## S3-T1
-Area: Dashboard
-Priority: high
-Depends: -
-Description: Worktrees görünümünü 2 kolonlu grid layout'a çevir. Sol kolon: worktree kartları (branch name büyük, path küçük, dirty/clean badge, ahead/behind sayaçları). Sağ kolon: seçili worktree'nin detayları (associated tasks, HEAD commit, full path). Kart tıklayınca seçilsin, accordion kaldırılsın.
-AC: Grid layout çalışıyor. Worktree kartı seçilince sağda detaylar görünüyor. Accordion expand/collapse yok, direkt seçim var.
-
-# Slice S4 — /usage Kotaları Dashboard'da
-
-## S4-T1
 Area: Server
 Priority: high
 Depends: -
-Description: `GET /usage` endpoint ekle. `~/.claude/usage.json` veya benzer dosyayı oku (yoksa Claude API /usage endpoint'ini simüle et). Endpoint: kalan mesaj kotası, kullanılan token miktarı, reset zamanı bilgilerini dönsün. Dosya yoksa 404 + hint dön.
-AC: `curl http://localhost:4317/usage` bir JSON döndürüyor. Hata durumunda anlamlı mesaj var.
+Description: `/sessions` endpoint'ini session-meta verileriyle zenginleştir. Mevcut session listesini döndürürken, session ID'ye göre `~/.claude/usage-data/session-meta/<id>.json` dosyasını da oku (varsa). Varsa: lines_added, git_commits, languages, duration_minutes, tool_counts alanlarını session objesine ekle. Dosya yoksa bu alanlar undefined kalır.
+AC: `/sessions` response'unda mevcut session'lar için lines_added ve git_commits görünüyor.
 
-## S4-T2
-Area: Dashboard
-Priority: high
-Depends: S4-T1
-Description: Top bar'a kullanım kotası widget'ı ekle. SSE dot'un yanına küçük bir "quota" göstergesi: kalan mesaj sayısı veya % olarak. Hover'da detaylı bilgi (reset time, token usage). Veri yoksa widget gizli kalır.
-AC: Kota verisi varsa top bar'da küçük gösterge görünüyor. Tooltip'te detay var. Veri yoksa hiçbir şey gösterilmiyor.
-
-# Slice S5 — Session Resume
-
-## S5-T1
+## S3-T2
 Area: Dashboard
 Priority: medium
-Depends: -
-Description: Live Mode session kartlarına "Resume" butonu ekle. `claude resume <sessionId>` komutunu panoya kopyalar ve bir toast gösterir. Session detail panel'inde (sağ slide-in) de bu buton olsun. Tooltip: "Copy 'claude resume <id>' to clipboard".
-AC: Session kartında küçük "Resume" ikonu var. Tıklayınca `claude resume <sessionId>` komutu kopyalanıyor. Toast 3sn görünüyor.
-
-## S5-T2
-Area: Server
-Priority: medium
-Depends: -
-Description: `POST /sessions/:id/resume-cmd` endpoint ekle. `{"command": "claude resume <sessionId>", "sessionId": "..."}` döndürür. Dashboard bu endpoint üzerinden komutu alır (client-side fallback da var).
-AC: Endpoint çalışıyor. Dashboard hem endpoint hem de client-side string concat ile komutu üretiyor.
+Depends: S3-T1
+Description: LiveView session kartlarında session-meta bilgilerini göster. Session kartının altına küçük badge'ler ekle: "↑ 1.2K lines", "2 commits", kullanılan diller (TypeScript, Python gibi). Veri yoksa badge görünmez.
+AC: Session kartlarında lines_added ve git_commits badge'leri görünüyor. Veri yoksa temiz görünüm korunuyor.

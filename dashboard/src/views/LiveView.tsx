@@ -258,6 +258,19 @@ export function LiveView({
                     <ContextHealthMini health={session.contextHealth} />
                   </div>
                 </div>
+                {((session.linesAdded ?? 0) > 0 || (session.gitCommits ?? 0) > 0) && (
+                  <div className="flex items-center gap-2 text-[10px] mt-1">
+                    {(session.linesAdded ?? 0) > 0 && (
+                      <span className="text-chart-2">+{formatTokens(session.linesAdded!)} lines</span>
+                    )}
+                    {(session.gitCommits ?? 0) > 0 && (
+                      <span className="text-chart-1">{session.gitCommits} commit{session.gitCommits !== 1 ? "s" : ""}</span>
+                    )}
+                    {session.languages && Object.keys(session.languages).slice(0, 2).map(l => (
+                      <span key={l} className="text-muted-foreground/50">{l}</span>
+                    ))}
+                  </div>
+                )}
               </button>
               {/* Resume button — outside the main card button to avoid nested interactive elements */}
               <button

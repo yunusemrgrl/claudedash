@@ -10,17 +10,19 @@ import {
   Lightbulb,
   PanelLeft,
   PanelLeftClose,
+  BarChart2,
   type LucideIcon,
 } from "lucide-react";
-import type { HealthResponse } from "@/types";
+import type { HealthResponse, UsageStats } from "@/types";
 import { WorktreePanel } from "@/components/WorktreePanel";
 import { LiveView } from "@/views/LiveView";
 import { PlanView } from "@/views/PlanView";
 import { InsightsView } from "@/views/InsightsView";
+import { ActivityView } from "@/views/ActivityView";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Tooltip } from "@/components/ui/tooltip";
 
-type ViewMode = "live" | "plan" | "insights" | "worktrees";
+type ViewMode = "live" | "plan" | "worktrees" | "activity" | "insights";
 
 const NAV_TABS: {
   id: Exclude<ViewMode, "insights">;
@@ -50,14 +52,19 @@ const NAV_TABS: {
     tooltip: "Git worktree status across parallel branches",
     show: (m) => m.live || m.plan,
   },
+  {
+    id: "activity",
+    icon: BarChart2,
+    label: "Activity",
+    tooltip: "Usage stats, session history and token breakdown",
+    show: () => true,
+  },
 ];
 
-interface UsageData {
-  remaining?: number;
-  total?: number;
-  tokensUsed?: number;
-  resetAt?: string;
-  [key: string]: unknown;
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 export default function Dashboard() {
@@ -68,16 +75,17 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const { showDeniedBanner, dismissDeniedBanner, sseConnected } = useNotifications();
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Fetch usage stats for top bar widget
   useEffect(() => {
     fetch("/usage")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: UsageData | null) => { if (d) setUsageData(d); })
-      .catch(() => { /* no usage data — widget stays hidden */ });
+      .then((d: UsageStats | null) => { if (d) setUsageStats(d); })
+      .catch(() => { /* no data — widget stays hidden */ });
   }, []);
 
   useEffect(() => {
@@ -87,6 +95,7 @@ export default function Dashboard() {
         setAvailableModes(data.modes);
         if (data.modes.live) setMode("live");
         else if (data.modes.plan) setMode("plan");
+        else setMode("activity");
         setLoading(false);
       })
       .catch(() => {
@@ -98,7 +107,7 @@ export default function Dashboard() {
   const handleInsightsToggle = () => {
     setMode((prev) =>
       prev === "insights"
-        ? availableModes.live ? "live" : "plan"
+        ? availableModes.live ? "live" : availableModes.plan ? "plan" : "activity"
         : "insights"
     );
   };
@@ -118,6 +127,17 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // Top-bar widget tooltip content
+  const widgetTooltip = usageStats ? [
+    `${fmtNum(usageStats.totalMessages)} messages · ${fmtNum(usageStats.totalSessions)} sessions`,
+    usageStats.firstSessionDate
+      ? `Since ${new Date(usageStats.firstSessionDate).toLocaleDateString()}`
+      : null,
+    usageStats.lastComputedDate
+      ? `Stats date: ${usageStats.lastComputedDate}`
+      : null,
+  ].filter(Boolean).join(" · ") : "";
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -140,48 +160,37 @@ export default function Dashboard() {
       <div className="bg-sidebar border-b border-sidebar-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           {/* Sidebar toggle */}
-          <Tooltip
-            content={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            side="bottom"
-          >
+          <Tooltip content={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} side="bottom">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
             >
-              {sidebarCollapsed ? (
-                <PanelLeft className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-4" />
-              )}
+              {sidebarCollapsed ? <PanelLeft className="size-4" /> : <PanelLeftClose className="size-4" />}
             </button>
           </Tooltip>
 
           <div className="flex items-baseline gap-2">
             <h1 className="text-lg font-semibold text-foreground">claudedash</h1>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-              v0.6.0
-            </span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v0.7.0</span>
           </div>
 
           {/* Main nav tabs */}
           <div className="flex items-center bg-muted rounded-lg p-0.5">
-            {NAV_TABS.filter((t) => t.show(availableModes)).map(
-              ({ id, icon: Icon, label, tooltip }) => (
-                <Tooltip key={id} content={tooltip} side="bottom">
-                  <button
-                    onClick={() => setMode(id)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
-                      mode === id
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="size-3" />
-                    {label}
-                  </button>
-                </Tooltip>
-              )
-            )}
+            {NAV_TABS.filter((t) => t.show(availableModes)).map(({ id, icon: Icon, label, tooltip }) => (
+              <Tooltip key={id} content={tooltip} side="bottom">
+                <button
+                  onClick={() => setMode(id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    mode === id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="size-3" />
+                  {label}
+                </button>
+              </Tooltip>
+            ))}
           </div>
         </div>
 
@@ -198,40 +207,20 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Usage quota widget — hidden when no data */}
-          {usageData && (
-            <Tooltip
-              content={[
-                usageData.remaining != null && usageData.total != null
-                  ? `${String(usageData.remaining)} / ${String(usageData.total)} messages remaining`
-                  : null,
-                usageData.tokensUsed != null
-                  ? `${String(usageData.tokensUsed)} tokens used`
-                  : null,
-                usageData.resetAt
-                  ? `Resets: ${new Date(String(usageData.resetAt)).toLocaleString()}`
-                  : null,
-              ].filter(Boolean).join(" · ") || "Usage data available"}
-              side="bottom"
-            >
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/60 text-xs text-muted-foreground cursor-default">
-                {usageData.remaining != null && usageData.total != null ? (
-                  <>
-                    <span className={`font-medium ${
-                      usageData.remaining / usageData.total < 0.1
-                        ? "text-chart-5"
-                        : usageData.remaining / usageData.total < 0.3
-                          ? "text-chart-3"
-                          : "text-chart-2"
-                    }`}>
-                      {Math.round(usageData.remaining / usageData.total * 100)}%
-                    </span>
-                    <span className="opacity-50">quota</span>
-                  </>
-                ) : (
-                  <span>quota</span>
-                )}
-              </div>
+          {/* Usage stats widget — always visible once stats-cache.json exists */}
+          {usageStats && (
+            <Tooltip content={widgetTooltip} side="bottom">
+              <button
+                onClick={() => setMode("activity")}
+                className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/60 hover:bg-muted transition-colors text-xs text-muted-foreground cursor-pointer"
+              >
+                <BarChart2 className="size-3 text-chart-1" />
+                <span className="font-medium text-foreground">{fmtNum(usageStats.totalMessages)}</span>
+                <span className="opacity-50">msgs</span>
+                <span className="opacity-30">·</span>
+                <span className="font-medium text-foreground">{fmtNum(usageStats.totalSessions)}</span>
+                <span className="opacity-50">sessions</span>
+              </button>
             </Tooltip>
           )}
 
@@ -241,22 +230,13 @@ export default function Dashboard() {
             side="bottom"
           >
             <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground cursor-default">
-              <span
-                className={`size-2 rounded-full ${
-                  sseConnected ? "bg-chart-2 animate-pulse" : "bg-muted-foreground/40"
-                }`}
-              />
-              <span className="hidden sm:inline">
-                {sseConnected ? "live" : "connecting"}
-              </span>
+              <span className={`size-2 rounded-full ${sseConnected ? "bg-chart-2 animate-pulse" : "bg-muted-foreground/40"}`} />
+              <span className="hidden sm:inline">{sseConnected ? "live" : "connecting"}</span>
             </div>
           </Tooltip>
 
-          {/* Insights lightbulb — secondary nav */}
-          <Tooltip
-            content="Claude Code usage analytics · Run /insight to generate"
-            side="bottom"
-          >
+          {/* Insights lightbulb */}
+          <Tooltip content="Claude Code usage analytics · Run /insight to generate" side="bottom">
             <button
               onClick={handleInsightsToggle}
               className={`p-1.5 rounded transition-colors ${
@@ -289,6 +269,8 @@ export default function Dashboard() {
           <PlanView searchQuery={searchQuery} sidebarCollapsed={sidebarCollapsed} mounted={mounted} />
         ) : mode === "worktrees" ? (
           <WorktreePanel />
+        ) : mode === "activity" ? (
+          <ActivityView />
         ) : (
           <InsightsView />
         )}

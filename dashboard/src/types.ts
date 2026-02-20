@@ -83,6 +83,11 @@ export interface ClaudeSession {
   cwd?: string;
   tokenUsage?: TokenUsage;
   contextHealth?: ContextHealth | null;
+  // Enriched from session-meta
+  linesAdded?: number;
+  gitCommits?: number;
+  languages?: Record<string, number>;
+  durationMinutes?: number;
 }
 
 export interface SessionsResponse {
@@ -198,6 +203,59 @@ export interface ContextHealth {
   tokensUsed: number;
   maxTokens?: number;
   estimationMethod?: string;
+}
+
+// Activity / Stats types (from stats-cache.json + session-meta)
+export interface DailyActivity {
+  date: string;
+  messageCount: number;
+  sessionCount: number;
+  toolCallCount: number;
+}
+
+export interface ModelUsageEntry {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  costUSD?: number;
+}
+
+export interface UsageStats {
+  totalSessions: number;
+  totalMessages: number;
+  firstSessionDate: string | null;
+  longestSession: { sessionId: string; duration: number; messageCount: number; timestamp: string } | null;
+  hourCounts: Record<string, number>;
+  modelUsage: Record<string, ModelUsageEntry>;
+  dailyActivity: DailyActivity[];
+  lastComputedDate: string | null;
+}
+
+export interface ActivitySession {
+  sessionId: string;
+  projectPath: string | null;
+  projectName: string | null;
+  startTime: string | null;
+  durationMinutes: number | null;
+  userMessageCount: number;
+  assistantMessageCount: number;
+  toolCounts: Record<string, number>;
+  languages: Record<string, number>;
+  gitCommits: number;
+  gitPushes: number;
+  inputTokens: number;
+  outputTokens: number;
+  linesAdded: number;
+  firstPrompt: string | null;
+  toolErrors: number;
+  usesMcp: boolean;
+  usesWebSearch: boolean;
+}
+
+export interface ActivitySessionsResponse {
+  sessions: ActivitySession[];
+  total: number;
 }
 
 // Worktree types
