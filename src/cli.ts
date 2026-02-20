@@ -184,6 +184,86 @@ Run \`npx -y claudedash@latest start\` to view progress.
       writeFileSync(join(claudeWatchDir, 'CLAUDE.md'), claudeMdContent);
       console.log('✓ Created CLAUDE.md');
 
+      // Create hooks/ directory with lifecycle templates
+      mkdirSync(join(claudeWatchDir, 'hooks'), { recursive: true });
+
+      const preCompactHook = `# Pre-Compact Hook
+
+Run this before Claude Code compacts the conversation.
+Add to your project's CLAUDE.md or register as a PreCompact hook.
+
+## Purpose
+Save the current plan state so it can be restored after compaction.
+
+## Instructions for the agent
+
+Before context compaction, write a brief state snapshot:
+1. Current task ID from .claudedash/queue.md (the one in_progress)
+2. How many tasks are DONE (count lines in execution.log)
+3. Any important decisions or blockers from the last few messages
+
+Write the snapshot to .claudedash/compact-state.md:
+\`\`\`
+# Compact State
+Task: S1-T3
+Completed: 2 (S1-T1, S1-T2)
+Status: In progress — editing src/server/server.ts, adding CORS restriction
+Blocker: none
+\`\`\`
+`;
+
+      const postCompactHook = `# Post-Compact Hook
+
+Run this after Claude Code compacts the conversation.
+Add to your project's CLAUDE.md or register as a PostCompact hook.
+
+## Purpose
+Re-inject plan context after compaction so the agent resumes correctly.
+
+## Instructions for the agent
+
+After context compaction, immediately:
+1. Read .claudedash/compact-state.md (if it exists)
+2. Read .claudedash/execution.log to verify completed tasks
+3. Read .claudedash/queue.md to find the current task
+4. Resume from exactly where the snapshot says
+
+Then delete .claudedash/compact-state.md to avoid stale state.
+`;
+
+      const stopHook = `# Stop Hook
+
+Prevents the agent from stopping mid-task.
+Register as a Stop hook in Claude Code settings.
+
+## Purpose
+If there are pending tasks in the queue, remind the agent to continue.
+
+## Logic (loop_limit: 3)
+
+\`\`\`json
+{
+  "hook": "Stop",
+  "loop_limit": 3,
+  "condition": "pending tasks remain in .claudedash/queue.md not in execution.log",
+  "followup_message": "There are still pending tasks in .claudedash/queue.md. Check .claudedash/workflow.md and continue with the next READY task. Do not stop until all tasks are DONE or BLOCKED."
+}
+\`\`\`
+
+## How to Install
+
+Add to your Claude Code hooks configuration:
+1. Open Claude Code settings
+2. Navigate to Hooks → Stop
+3. Paste the JSON block above
+4. Set loop_limit to 3 to prevent infinite loops
+`;
+
+      writeFileSync(join(claudeWatchDir, 'hooks', 'pre-compact.md'), preCompactHook);
+      writeFileSync(join(claudeWatchDir, 'hooks', 'post-compact.md'), postCompactHook);
+      writeFileSync(join(claudeWatchDir, 'hooks', 'stop.md'), stopHook);
+      console.log('✓ Created hooks/ (pre-compact, post-compact, stop)');
+
       console.log('\n✓ Ready! Next steps:');
       console.log('  1. Edit .claudedash/queue.md with your tasks');
       console.log('  2. Copy .claudedash/CLAUDE.md contents into your project CLAUDE.md');
