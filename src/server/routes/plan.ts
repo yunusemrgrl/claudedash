@@ -31,7 +31,7 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
     if (!agentScopeDir) {
       return {
         snapshot: null,
-        queueErrors: ['Plan mode not configured. Run "agent-scope init" first.'],
+        queueErrors: ['Plan mode not configured. Run "claudedash init" first.'],
         logErrors: [],
         meta: { generatedAt: new Date().toISOString(), totalTasks: 0 }
       };

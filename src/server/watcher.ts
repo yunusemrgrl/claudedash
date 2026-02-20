@@ -15,7 +15,7 @@ export interface WatchEvent {
 
 /**
  * Creates a file watcher that emits events when task files change.
- * Watches ~/.claude/tasks/ and ~/.claude/todos/ for Live mode and .agent-scope/ for Plan mode.
+ * Watches ~/.claude/tasks/ and ~/.claude/todos/ for Live mode and .claudedash/ for Plan mode.
  * Monitors parent directory to detect late-created subdirectories.
  */
 export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; emitter: EventEmitter } {
@@ -34,7 +34,7 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
     }
   }
 
-  // Watch agent-scope files if configured
+  // Watch claudedash files if configured
   if (options.agentScopeDir && existsSync(options.agentScopeDir)) {
     const queuePath = join(options.agentScopeDir, 'queue.md');
     const logPath = join(options.agentScopeDir, 'execution.log');
@@ -87,7 +87,7 @@ export function createWatcher(options: WatcherOptions): { watcher: FSWatcher; em
   };
 
   const classifyEvent = (path: string): WatchEvent['type'] => {
-    return path.includes('.agent-scope') ? 'plan' : 'sessions';
+    return path.includes('.claudedash') ? 'plan' : 'sessions';
   };
 
   // Detect late-created directories and start watching them
