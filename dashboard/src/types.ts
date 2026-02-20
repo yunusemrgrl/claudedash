@@ -95,6 +95,8 @@ export interface HealthResponse {
     live: boolean;
     plan: boolean;
   };
+  connectedClients?: number;
+  lastSessions?: string | null;
 }
 
 // Insights types

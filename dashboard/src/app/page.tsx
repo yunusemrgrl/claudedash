@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { showDeniedBanner, dismissDeniedBanner } = useNotifications();
+  const { showDeniedBanner, dismissDeniedBanner, sseConnected } = useNotifications();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -138,6 +138,16 @@ export default function Dashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring w-48"
             />
+          </div>
+          {/* SSE connection health indicator */}
+          <div
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            title={sseConnected ? "Live connection active" : "Connecting..."}
+          >
+            <span
+              className={`size-2 rounded-full ${sseConnected ? "bg-chart-2" : "bg-muted-foreground/40"} ${sseConnected ? "animate-pulse" : ""}`}
+            />
+            <span className="hidden sm:inline">{sseConnected ? "live" : "connecting"}</span>
           </div>
           <button
             className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"

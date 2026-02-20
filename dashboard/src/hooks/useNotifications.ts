@@ -54,6 +54,7 @@ function diffPlanTasks(
 
 export function useNotifications() {
   const [showDeniedBanner, setShowDeniedBanner] = useState(false);
+  const [sseConnected, setSseConnected] = useState(false);
   const prevLiveMap = useRef<Map<string, string>>(new Map());
   const prevPlanMap = useRef<Map<string, string>>(new Map());
   const initializedLive = useRef(false);
@@ -78,6 +79,8 @@ export function useNotifications() {
     if (typeof window === "undefined") return;
 
     const es = new EventSource("/events/");
+    es.onopen = () => setSseConnected(true);
+    es.onerror = () => setSseConnected(false);
 
     es.onmessage = (event) => {
       try {
@@ -140,11 +143,15 @@ export function useNotifications() {
       }
     };
 
-    return () => es.close();
+    return () => {
+      es.close();
+      setSseConnected(false);
+    };
   }, []);
 
   return {
     showDeniedBanner,
     dismissDeniedBanner: () => setShowDeniedBanner(false),
+    sseConnected,
   };
 }

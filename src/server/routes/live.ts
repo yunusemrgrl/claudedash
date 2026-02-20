@@ -15,15 +15,22 @@ export interface LiveRouteOptions {
 export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOptions): Promise<void> {
   const { claudeDir, agentScopeDir, emitter } = opts;
   const sseClients = new Set<(event: WatchEvent) => void>();
+  let lastSessions: string | null = null;
 
   emitter.on('change', (event: WatchEvent) => {
+    if (event.type === 'sessions') lastSessions = new Date().toISOString();
     for (const send of sseClients) send(event);
   });
 
   fastify.get('/health', async () => {
     const hasLive = existsSync(join(claudeDir, 'tasks')) || existsSync(join(claudeDir, 'todos'));
     const hasPlan = agentScopeDir ? existsSync(join(agentScopeDir, 'queue.md')) : false;
-    return { status: 'ok', modes: { live: hasLive, plan: hasPlan } };
+    return {
+      status: 'ok',
+      modes: { live: hasLive, plan: hasPlan },
+      connectedClients: sseClients.size,
+      lastSessions,
+    };
   });
 
   fastify.get('/events', async (_request, reply) => {
