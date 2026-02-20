@@ -432,6 +432,109 @@ program
   });
 
 program
+  .command('spec')
+  .description('Initialize spec-mode templates (.claudedash/spec/)')
+  .action(() => {
+    const specDir = join(process.cwd(), '.claudedash', 'spec');
+    if (!existsSync(join(process.cwd(), '.claudedash'))) {
+      console.error('❌ Run "claudedash init" first.');
+      process.exit(1);
+    }
+    if (existsSync(specDir)) {
+      console.log('⚠️  .claudedash/spec/ already exists');
+      process.exit(1);
+    }
+    try {
+      mkdirSync(specDir, { recursive: true });
+
+      writeFileSync(join(specDir, 'plan.md'), `# Spec: Plan Phase
+
+## Goal
+[One-sentence feature description]
+
+## Exploration Checklist
+- [ ] Read existing code affected by this change
+- [ ] Identify integration points and edge cases
+- [ ] Propose approach (max 3 options, choose one)
+- [ ] Get user approval before moving to implement phase
+
+## Decision
+Chosen approach: [write here]
+Approved: yes / no
+`);
+
+      writeFileSync(join(specDir, 'implement.md'), `# Spec: Implement Phase
+
+## Acceptance Criteria
+[Copy from queue.md task AC]
+
+## TDD Checklist
+- [ ] Write failing test first
+- [ ] Implement minimum code to pass
+- [ ] Refactor if needed (tests still green)
+- [ ] Run npm test — all pass
+
+## Files Changed
+[List here]
+`);
+
+      writeFileSync(join(specDir, 'verify.md'), `# Spec: Verify Phase
+
+## Review Checklist
+- [ ] All AC items satisfied
+- [ ] No regressions (full test suite passes)
+- [ ] Lint clean
+- [ ] Edge cases handled
+- [ ] Peer/self review complete
+
+## Result
+Status: DONE / FAILED
+Notes: [write here]
+`);
+
+      console.log('✓ Created .claudedash/spec/ (plan.md, implement.md, verify.md)');
+      console.log('\nUsage:');
+      console.log('  1. Fill in spec/plan.md and get approval');
+      console.log('  2. Follow spec/implement.md (TDD)');
+      console.log('  3. Complete spec/verify.md checklist');
+      console.log('  4. Log result to .claudedash/execution.log');
+    } catch (error) {
+      console.error('❌ Failed to create spec templates:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('worktree')
+  .description('Manage isolated worktrees for parallel agent runs')
+  .argument('<action>', 'Action: create')
+  .argument('[branch]', 'Branch name for create action')
+  .action((action: string, branch: string | undefined) => {
+    if (action !== 'create') {
+      console.error(`❌ Unknown action: ${action}. Supported: create`);
+      process.exit(1);
+    }
+    if (!branch) {
+      console.error('❌ Branch name required: claudedash worktree create <branch>');
+      process.exit(1);
+    }
+    const worktreePath = join(process.cwd(), '..', branch.replace(/\//g, '-'));
+    execFile('git', ['worktree', 'add', '-b', branch, worktreePath], (err, _stdout, stderr) => {
+      if (err) {
+        console.error('❌ Failed to create worktree:', stderr || err.message);
+        process.exit(1);
+      }
+      console.log(`✓ Worktree created at: ${worktreePath}`);
+      console.log(`  Branch: ${branch}`);
+      console.log(`\nNext steps:`);
+      console.log(`  cd ${worktreePath}`);
+      console.log(`  claudedash init`);
+      console.log(`  claudedash start`);
+      console.log(`\nThe dashboard Worktrees tab will show sessions for this branch.`);
+    });
+  });
+
+program
   .command('recover')
   .description('Summarize the last Claude Code session after /clear')
   .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
