@@ -193,7 +193,7 @@ export function InsightsView() {
       ) : (
         <iframe
           srcDoc={srcDoc ?? ""}
-          sandbox="allow-same-origin"
+          sandbox="allow-scripts allow-same-origin"
           className="flex-1 w-full border-0 bg-[#18181b]"
           title="Claude Code Insights Report"
         />
