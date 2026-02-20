@@ -1,13 +1,13 @@
-# Contributing to agent-scope
+# Contributing to claudedash
 
 Thank you for your interest in contributing! This document covers the architecture, directory structure, and how to extend the project.
 
 ## Architecture Overview
 
-agent-scope has two parts that communicate at runtime:
+claudedash has two parts that communicate at runtime:
 
 ```
-Claude Code session (agent)          agent-scope server
+Claude Code session (agent)          claudedash server
 ─────────────────────────            ─────────────────
 TodoWrite → tasks.json               reads tasks.json
 execution.log ──────────────────────► /snapshot
@@ -23,7 +23,7 @@ See [`docs/architecture.md`](docs/architecture.md) for a detailed data flow diag
 ## Directory Map
 
 ```
-agent-scope/
+claudedash/
 ├── src/
 │   ├── cli.ts                  # Entry point: parses CLI args, calls startServer
 │   ├── core/
@@ -68,8 +68,8 @@ agent-scope/
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/yunusemrgrl/agent-scope.git
-cd agent-scope
+git clone https://github.com/yunusemrgrl/claudedash.git
+cd claudedash
 npm install
 
 # 2. Build everything
