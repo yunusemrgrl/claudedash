@@ -29,7 +29,7 @@ export async function startServer(options: ServerOptions): Promise<void> {
   await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
-    allowlist: ['127.0.0.1', '::1'],
+    allowList: ['127.0.0.1', '::1'],
     addHeaders: {
       'x-ratelimit-limit': true,
       'x-ratelimit-remaining': true,

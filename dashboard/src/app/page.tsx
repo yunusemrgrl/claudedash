@@ -6,8 +6,8 @@ import {
   RefreshCw,
   Radio,
   ClipboardList,
-  BarChart3,
   GitBranch,
+  Lightbulb,
   PanelLeft,
   PanelLeftClose,
   type LucideIcon,
@@ -18,7 +18,39 @@ import { LiveView } from "@/views/LiveView";
 import { PlanView } from "@/views/PlanView";
 import { InsightsView } from "@/views/InsightsView";
 import { useNotifications } from "@/hooks/useNotifications";
+import { Tooltip } from "@/components/ui/tooltip";
+
 type ViewMode = "live" | "plan" | "insights" | "worktrees";
+
+const NAV_TABS: {
+  id: Exclude<ViewMode, "insights">;
+  icon: LucideIcon;
+  label: string;
+  tooltip: string;
+  show: (modes: { live: boolean; plan: boolean }) => boolean;
+}[] = [
+  {
+    id: "live",
+    icon: Radio,
+    label: "Live",
+    tooltip: "Real-time Claude Code session monitor",
+    show: (m) => m.live,
+  },
+  {
+    id: "plan",
+    icon: ClipboardList,
+    label: "Plan",
+    tooltip: "Queue-based task planning and execution tracker",
+    show: (m) => m.plan,
+  },
+  {
+    id: "worktrees",
+    icon: GitBranch,
+    label: "Worktrees",
+    tooltip: "Git worktree status across parallel branches",
+    show: (m) => m.live || m.plan,
+  },
+];
 
 export default function Dashboard() {
   const [mode, setMode] = useState<ViewMode>("live");
@@ -46,6 +78,14 @@ export default function Dashboard() {
         setLoading(false);
       });
   }, []);
+
+  const handleInsightsToggle = () => {
+    setMode((prev) =>
+      prev === "insights"
+        ? availableModes.live ? "live" : "plan"
+        : "insights"
+    );
+  };
 
   if (loading) {
     return (
@@ -79,20 +119,27 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
       {/* Top Bar */}
       <div className="bg-sidebar border-b border-sidebar-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          {/* Sidebar toggle */}
+          <Tooltip
+            content={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            side="bottom"
           >
-            {sidebarCollapsed ? (
-              <PanelLeft className="size-4" />
-            ) : (
-              <PanelLeftClose className="size-4" />
-            )}
-          </button>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
+            >
+              {sidebarCollapsed ? (
+                <PanelLeft className="size-4" />
+              ) : (
+                <PanelLeftClose className="size-4" />
+              )}
+            </button>
+          </Tooltip>
+
           <div className="flex items-baseline gap-2">
             <h1 className="text-lg font-semibold text-foreground">claudedash</h1>
             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
@@ -100,35 +147,30 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {/* Mode Toggle */}
+          {/* Main nav tabs */}
           <div className="flex items-center bg-muted rounded-lg p-0.5">
-            {(
-              [
-                { id: "live", icon: Radio, label: "Live", show: availableModes.live },
-                { id: "plan", icon: ClipboardList, label: "Plan", show: availableModes.plan },
-                { id: "insights", icon: BarChart3, label: "Insights", show: availableModes.live || availableModes.plan },
-                { id: "worktrees", icon: GitBranch, label: "Worktrees", show: availableModes.live || availableModes.plan },
-              ] as { id: ViewMode; icon: LucideIcon; label: string; show: boolean }[]
-            )
-              .filter((m) => m.show)
-              .map(({ id, icon: Icon, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setMode(id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    mode === id
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-3" />
-                  {label}
-                </button>
-              ))}
+            {NAV_TABS.filter((t) => t.show(availableModes)).map(
+              ({ id, icon: Icon, label, tooltip }) => (
+                <Tooltip key={id} content={tooltip} side="bottom">
+                  <button
+                    onClick={() => setMode(id)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
+                      mode === id
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="size-3" />
+                    {label}
+                  </button>
+                </Tooltip>
+              )
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Filter input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <input
@@ -139,22 +181,50 @@ export default function Dashboard() {
               className="bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring w-48"
             />
           </div>
-          {/* SSE connection health indicator */}
-          <div
-            className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            title={sseConnected ? "Live connection active" : "Connecting..."}
+
+          {/* SSE connection indicator */}
+          <Tooltip
+            content={sseConnected ? "Live connection active · Server-Sent Events" : "Connecting to server…"}
+            side="bottom"
           >
-            <span
-              className={`size-2 rounded-full ${sseConnected ? "bg-chart-2" : "bg-muted-foreground/40"} ${sseConnected ? "animate-pulse" : ""}`}
-            />
-            <span className="hidden sm:inline">{sseConnected ? "live" : "connecting"}</span>
-          </div>
-          <button
-            className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
-            onClick={() => window.location.reload()}
+            <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground cursor-default">
+              <span
+                className={`size-2 rounded-full ${
+                  sseConnected ? "bg-chart-2 animate-pulse" : "bg-muted-foreground/40"
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {sseConnected ? "live" : "connecting"}
+              </span>
+            </div>
+          </Tooltip>
+
+          {/* Insights lightbulb — secondary nav */}
+          <Tooltip
+            content="Claude Code usage analytics · Run /insight to generate"
+            side="bottom"
           >
-            <RefreshCw className="size-3.5 text-muted-foreground" />
-          </button>
+            <button
+              onClick={handleInsightsToggle}
+              className={`p-1.5 rounded transition-colors ${
+                mode === "insights"
+                  ? "bg-sidebar-accent text-chart-3"
+                  : "hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Lightbulb className="size-4" />
+            </button>
+          </Tooltip>
+
+          {/* Refresh */}
+          <Tooltip content="Reload dashboard" side="bottom">
+            <button
+              className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw className="size-3.5 text-muted-foreground" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
