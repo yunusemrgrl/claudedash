@@ -139,6 +139,41 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
     }
   });
 
+  fastify.post<{
+    Body: { subject: string; priority?: string; dependsOn?: string };
+  }>('/plan/task', async (request, reply) => {
+    if (!agentScopeDir) return reply.code(400).send({ error: 'Plan mode not configured' });
+
+    const { subject, priority = 'medium', dependsOn = '-' } = request.body ?? {};
+    if (!subject || typeof subject !== 'string' || !subject.trim()) {
+      return reply.code(400).send({ error: 'subject is required' });
+    }
+
+    const queuePath = join(agentScopeDir, 'queue.md');
+    if (!existsSync(queuePath)) return reply.code(400).send({ error: 'queue.md not found' });
+
+    // Determine next task ID (count existing ## S\d+-T\d+ headers)
+    const existing = readFileSync(queuePath, 'utf-8');
+    const ids = [...existing.matchAll(/^## (S\d+-T\d+)/gm)].map(m => m[1]);
+    const last = ids[ids.length - 1];
+    let nextId = 'S1-T1';
+    if (last) {
+      const m = /S(\d+)-T(\d+)/.exec(last);
+      if (m) nextId = `S${m[1]}-T${parseInt(m[2]) + 1}`;
+    }
+
+    const newBlock = `\n## ${nextId}\nArea: General\nPriority: ${priority}\nDepends: ${dependsOn}\nDescription: ${subject.trim()}\nAC: -\n`;
+    try {
+      appendFileSync(queuePath, newBlock, 'utf-8');
+    } catch {
+      return reply.code(500).send({ error: 'Failed to write to queue.md' });
+    }
+
+    if (emitter) emitter.emit('change', { type: 'plan', timestamp: new Date().toISOString() });
+
+    return { ok: true, task_id: nextId, subject: subject.trim() };
+  });
+
   fastify.patch<{
     Params: { taskId: string };
     Body: { status: 'DONE' | 'BLOCKED' | 'FAILED'; reason?: string };

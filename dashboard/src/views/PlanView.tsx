@@ -37,6 +37,30 @@ export function PlanView({
   const [qualityEvents, setQualityEvents] = useState<QualityEvent[]>([]);
   const [copiedTaskId, setCopiedTaskId] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSubject, setNewSubject] = useState('');
+  const [addingTask, setAddingTask] = useState(false);
+
+  const addTask = async () => {
+    if (!newSubject.trim()) return;
+    setAddingTask(true);
+    try {
+      const res = await fetch('/plan/task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: newSubject.trim() }),
+      });
+      if (res.ok) {
+        setNewSubject('');
+        setShowAddForm(false);
+        void refresh();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAddingTask(false);
+    }
+  };
 
   const updateTaskStatus = async (taskId: string, status: 'DONE' | 'BLOCKED') => {
     try {
@@ -230,6 +254,44 @@ export function PlanView({
             ))}
           </div>
         </ScrollArea>
+        {/* Add Task form */}
+        <div className="border-t border-sidebar-border p-3 shrink-0">
+          {showAddForm ? (
+            <div className="space-y-2">
+              <input
+                autoFocus
+                type="text"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void addTask(); if (e.key === 'Escape') setShowAddForm(false); }}
+                placeholder="Task title..."
+                className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void addTask()}
+                  disabled={!newSubject.trim() || addingTask}
+                  className="flex-1 text-xs py-1 rounded bg-chart-2/10 text-chart-2 border border-chart-2/20 hover:bg-chart-2/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {addingTask ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  onClick={() => { setShowAddForm(false); setNewSubject(''); }}
+                  className="text-xs py-1 px-2 rounded text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full text-xs text-muted-foreground hover:text-foreground py-1 border border-dashed border-border rounded hover:border-ring transition-colors"
+            >
+              + Add task
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
