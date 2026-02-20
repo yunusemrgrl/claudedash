@@ -31,11 +31,29 @@ export function PlanView({
   sidebarCollapsed: boolean;
   mounted: boolean;
 }) {
-  const { data } = usePlanSnapshot();
+  const { data, refresh } = usePlanSnapshot();
   const [selectedTask, setSelectedTask] = useState<ComputedTask | null>(null);
   const [expandedSlices, setExpandedSlices] = useState<Set<string>>(new Set());
   const [qualityEvents, setQualityEvents] = useState<QualityEvent[]>([]);
   const [copiedTaskId, setCopiedTaskId] = useState(false);
+  const [actionToast, setActionToast] = useState<string | null>(null);
+
+  const updateTaskStatus = async (taskId: string, status: 'DONE' | 'BLOCKED') => {
+    try {
+      const res = await fetch(`/plan/task/${encodeURIComponent(taskId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setActionToast(`Task ${taskId} marked ${status}`);
+        setTimeout(() => setActionToast(null), 5000);
+        void refresh();
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   // Auto-expand all slices on first data load
   useEffect(() => {
@@ -249,8 +267,39 @@ export function PlanView({
                     </>
                   )}
                 </button>
+                {(selectedTask.status === "READY" || selectedTask.status === "BLOCKED") && (
+                  <>
+                    <button
+                      onClick={() => void updateTaskStatus(selectedTask.id, 'DONE')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-chart-2/10 text-chart-2 hover:bg-chart-2/20 transition-colors text-xs font-medium border border-chart-2/20"
+                    >
+                      <Check className="size-3.5" />
+                      Mark Done
+                    </button>
+                    <button
+                      onClick={() => void updateTaskStatus(selectedTask.id, 'BLOCKED')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-chart-3/10 text-chart-3 hover:bg-chart-3/20 transition-colors text-xs font-medium border border-chart-3/20"
+                    >
+                      <AlertCircle className="size-3.5" />
+                      Block
+                    </button>
+                  </>
+                )}
               </div>
             </div>
+            {/* Action toast */}
+            {actionToast && (
+              <div className="bg-chart-2/10 border-b border-chart-2/20 px-6 py-2 text-xs text-chart-2 flex items-center gap-2 shrink-0">
+                <Check className="size-3.5" />
+                {actionToast}
+                <button
+                  onClick={() => setActionToast(null)}
+                  className="ml-auto text-chart-2/60 hover:text-chart-2"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
 
             <div className="flex-1 flex overflow-hidden">
               {/* Details */}
