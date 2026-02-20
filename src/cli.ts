@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { startServer } from './server/server.js';
 
 const program = new Command();
@@ -259,7 +259,7 @@ program
                          platform === 'win32' ? 'start' :
                          'xdg-open';
 
-      exec(`${openCommand} ${url}`, (error) => {
+      execFile(openCommand, [url], (error) => {
         if (error) {
           console.log('Could not auto-open browser. Please visit:', url);
         }
