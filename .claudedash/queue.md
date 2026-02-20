@@ -89,8 +89,8 @@ AC: README'de "Sharing with your team" H2 başlığı altında en az 3 kod örne
 Area: Docs
 Priority: high
 Depends: -
-Description: Landing sayfasına Worktrees özellik kartı ekle (mevcut 4 kart yanına 5. olarak). İçerik: "Paralel Worktree İzleme — Birden fazla git worktree'de çalışan agentları tek ekranda görün." Ayrıca sayfanın footer'ına "Not affiliated with Anthropic" disclaimeri ekle.
-AC: `landing/index.html`'de Worktrees feature kartı var. Footer'da disclaimer metni görünüyor. `npm run build` geçiyor.
+Description: Landing footer'ına "Not affiliated with Anthropic" disclaimeri ekle. Ayrıca hero badge'ine veya header nav'ına kısa "Not affiliated with Anthropic" ibaresi ekle (marka riski). Not: Worktrees bölümü landing'de zaten mevcut (`worktrees-section`), features grid'e eklemek gerekmez.
+AC: `landing/index.html` footer'ında "Not affiliated with Anthropic" yazısı var. `npm run build` geçiyor.
 
 ## S5-T2
 Area: Docs
@@ -98,13 +98,6 @@ Priority: high
 Depends: -
 Description: README.md'yi güncelle: (1) Test sayısını doğru yaz (mevcut `npx vitest run` çıktısıyla eşleştir), (2) CLI komutları tablosuna `recover`, `spec`, `worktree` ekle, (3) API endpoint tablosuna `/claude-insights` ve `?file=` parametresini ekle, (4) "Why claudedash?" bölümüne "Görev başarısız olduğunda bildirim al" maddesini ekle.
 AC: `grep "recover\|spec\|worktree" README.md` sonuç verir. API tablosunda `/claude-insights` satırı var.
-
-## S5-T3
-Area: Docs
-Priority: medium
-Depends: S5-T1
-Description: Landing sayfasına gerçek ekran görüntüsü veya animasyonlu GIF placeholder'ı ekle. Şu an `assets/screenshot-1.png` yolu var ama dosya yok. En azından `assets/` dizini oluştur ve placeholder SVG koy; kayıp dosya nedeniyle broken image gösterilmesin.
-AC: `assets/screenshot-1.png` veya `assets/screenshot-1.svg` mevcut. Landing'de broken image icon görünmüyor.
 
 # Slice S6 — Uyumluluk & Araçlar
 

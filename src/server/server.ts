@@ -24,12 +24,12 @@ export interface ServerOptions {
 export async function startServer(options: ServerOptions): Promise<void> {
   const { claudeDir, port, agentScopeDir, host = '127.0.0.1', token } = options;
 
-  const fastify = Fastify({ logger: false, ignoreTrailingSlash: true });
+  const fastify = Fastify({ logger: false, routerOptions: { ignoreTrailingSlash: true } });
 
   await fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
-    allowList: ['127.0.0.1', '::1'],
+    allowlist: ['127.0.0.1', '::1'],
     addHeaders: {
       'x-ratelimit-limit': true,
       'x-ratelimit-remaining': true,
