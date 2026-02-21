@@ -70,7 +70,7 @@
             </h1>
 
             <p class="hero-sub" id="hero-sub">
-              Live Kanban · Quality Gates · Context Monitoring<br />
+              Live Kanban · Session Analytics · Agent API<br />
               for Claude Code agents. Zero setup, no database.
             </p>
 
@@ -121,8 +121,9 @@
               <div class="kanban-wrap">
                 <div class="kb-mode-tabs">
                   <span class="kb-tab kb-tab-active">Live</span>
-                  <span class="kb-tab">Plan</span>
-                  <span class="kb-tab">Insights</span>
+                  <span class="kb-tab">Queue</span>
+                  <span class="kb-tab">Activity</span>
+                  <span class="kb-tab">Docs</span>
                 </div>
 
                 <div class="kanban-board" id="kanban-board">
@@ -232,7 +233,7 @@
       <section class="features" id="features">
         <div class="container">
           <div class="section-eyebrow">Core Features</div>
-          <h2 class="section-title">Observability designed<br />for AI agents.</h2>
+          <h2 class="section-title">Full-stack observability<br />for AI agents.</h2>
 
           <div class="features-grid">
             <article class="feature-card" data-animate>
@@ -309,6 +310,66 @@
                 <span>per session</span>
               </div>
             </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+              </div>
+              <h3>Session Quality &amp; AI Facets</h3>
+              <p>
+                Reads <code>~/.claude/usage-data/facets/</code> — AI-generated session analysis
+                with outcome scores, helpfulness ratings, friction types, and satisfaction rates.
+              </p>
+              <div class="fc-tags">
+                <span>outcome</span>
+                <span>helpfulness</span>
+                <span>satisfaction</span>
+              </div>
+            </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-cyan">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <h3>Agent API</h3>
+              <p>
+                HTTP endpoints for multi-agent workflows: <code>POST /log</code> to record task
+                results, <code>GET /queue</code> for computed statuses, agent registry with
+                heartbeat &amp; stale detection. BLOCKED events push browser notifications instantly.
+              </p>
+              <div class="fc-tags">
+                <span>POST /log</span>
+                <span>GET /queue</span>
+                <span>agent registry</span>
+              </div>
+            </article>
+
+            <article class="feature-card" data-animate>
+              <div class="fc-icon-wrap fc-orange">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <h3>Hook Architecture &amp; Cost Tracker</h3>
+              <p>
+                Install Claude Code lifecycle hooks with <code>claudedash hooks install</code>.
+                PostToolUse events stream via SSE. 5-hour rolling billing block estimates
+                cost in real time across all models.
+              </p>
+              <div class="fc-tags">
+                <span>PostToolUse</span>
+                <span>billing block</span>
+                <span>per-model cost</span>
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -365,18 +426,18 @@
                 <span class="term-title">Terminal</span>
                 <button class="term-copy-btn" id="term-copy">copy</button>
               </div>
-              <pre class="term-body"><code><span class="t-comment"># Zero-install — always gets the latest version</span>
+              <pre class="term-body"><code><span class="t-comment"># Zero-install — always gets latest version</span>
 <span class="t-prompt">$</span> <span class="t-cmd">npx</span> <span class="t-flag">-y</span> <span class="t-arg">claudedash@latest</span> <span class="t-cmd">start</span>
 
-<span class="t-comment"># Or install globally</span>
-<span class="t-prompt">$</span> <span class="t-pkg">npm</span> <span class="t-cmd">install</span> <span class="t-flag">-g</span> <span class="t-arg">claudedash</span>
-<span class="t-prompt">$</span> <span class="t-cmd">claudedash start</span>
+<span class="t-comment"># Install real-time lifecycle hooks</span>
+<span class="t-prompt">$</span> <span class="t-cmd">claudedash hooks install</span>
+<span class="t-ok">✓</span> <span class="t-success">Hooks installed in ~/.claude/settings.json</span>
 
-<span class="t-comment"># Custom project path</span>
-<span class="t-prompt">$</span> <span class="t-cmd">claudedash start</span> <span class="t-flag">--claude-dir</span> <span class="t-arg">~/my-project/.claude</span>
+<span class="t-comment"># Set up plan mode in your project</span>
+<span class="t-prompt">$</span> <span class="t-cmd">claudedash init</span>
+<span class="t-ok">✓</span> <span class="t-success">Created .claudedash/ with queue.md, workflow.md</span>
 
-<span class="t-out">▶</span> <span class="t-info">Reading ~/.claude/tasks/</span>
-<span class="t-out">▶</span> <span class="t-info">Watching .claudedash/queue.md</span>
+<span class="t-out">▶</span> <span class="t-info">Live sessions · Queue tracker · Agent registry</span>
 <span class="t-ok">✓</span> <span class="t-success">Server running at http://localhost:4317</span></code></pre>
             </div>
 
@@ -387,27 +448,28 @@
                   <h3>Run the CLI</h3>
                   <p>
                     Fastify server starts at <code>localhost:4317</code>. Chokidar watches
-                    <code>~/.claude/tasks/</code> and <code>.claudedash/</code> for changes.
+                    <code>~/.claude/</code> and <code>.claudedash/</code> for file changes via SSE.
                   </p>
                 </div>
               </div>
               <div class="qs-step" data-animate>
                 <span class="qs-num">02</span>
                 <div>
-                  <h3>Agent writes tasks</h3>
+                  <h3>Install hooks (optional)</h3>
                   <p>
-                    Claude Code's <code>TodoWrite</code> tool writes task files. claudedash
-                    picks them up instantly and broadcasts a <code>sessions</code> SSE event.
+                    Run <code>claudedash hooks install</code> to inject PostToolUse/Stop hooks
+                    into Claude Code. Every tool call streams live to the dashboard event feed.
                   </p>
                 </div>
               </div>
               <div class="qs-step" data-animate>
                 <span class="qs-num">03</span>
                 <div>
-                  <h3>Dashboard updates live</h3>
+                  <h3>Agents log via HTTP</h3>
                   <p>
-                    No polling. No refresh needed. SSE pushes changes to all open browser tabs
-                    within ~100ms of every file write.
+                    Agents call <code>POST /log</code> to record task results. BLOCKED status
+                    triggers instant browser notifications. <code>GET /queue</code> returns
+                    dependency-resolved task statuses.
                   </p>
                 </div>
               </div>
@@ -420,18 +482,21 @@
       <section class="worktrees-section">
         <div class="container wt-grid">
           <div class="wt-copy" data-animate>
-            <div class="section-eyebrow">Git Worktrees</div>
+            <div class="section-eyebrow">Git Worktrees &amp; Analytics</div>
             <h2>Multi-repo agent visibility.</h2>
             <p>
               Running agents across multiple git worktrees? claudedash maps sessions to branches by
-              <code>cwd</code> and shows dirty state, ahead/behind counts, and associated tasks per
-              worktree.
+              <code>cwd</code>, shows dirty state and ahead/behind counts — and the Activity tab
+              surfaces tool usage, prompt history, cost breakdown, and AI-scored session quality.
             </p>
             <div class="wt-tags">
               <span class="wt-tag">git worktree list</span>
               <span class="wt-tag">dirty detection</span>
               <span class="wt-tag">ahead / behind</span>
               <span class="wt-tag">task mapping</span>
+              <span class="wt-tag">tool analytics</span>
+              <span class="wt-tag">cost tracker</span>
+              <span class="wt-tag">AI quality scores</span>
             </div>
           </div>
           <div class="wt-media" data-animate>
@@ -448,8 +513,8 @@
         <div class="container">
           <div class="cta-card" data-animate>
             <div class="cta-glow" aria-hidden="true"></div>
-            <h2>Start watching your agent.</h2>
-            <p>One command. No config. See what your AI is doing in real time.</p>
+            <h2>Start watching your agents.</h2>
+            <p>One command. No config. Live Kanban, Agent API, quality analytics — in real time.</p>
             <div class="cta-actions">
               <button class="btn-cmd btn-cmd-lg" id="copy-cmd-2" title="Click to copy">
                 <span class="cmd-dollar">$</span>
