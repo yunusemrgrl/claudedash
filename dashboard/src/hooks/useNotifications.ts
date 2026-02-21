@@ -11,12 +11,12 @@ function notify(title: string, body: string) {
 
 const BASE_TITLE = "claudedash";
 
-function updateTabTitle(activeCount: number, failedCount: number) {
+function updateTabTitle(blockedCount: number, failedCount: number) {
   if (typeof document === "undefined") return;
   if (failedCount > 0) {
     document.title = `[⚠ ${failedCount} failed] ${BASE_TITLE}`;
-  } else if (activeCount > 0) {
-    document.title = `[${activeCount} active] ${BASE_TITLE}`;
+  } else if (blockedCount > 0) {
+    document.title = `[⚠ ${blockedCount} blocked] ${BASE_TITLE}`;
   } else {
     document.title = BASE_TITLE;
   }
@@ -110,8 +110,7 @@ export function useNotifications() {
                 }
               }
 
-              const activeCount = allTasks.filter((t) => t.status === "in_progress").length;
-              updateTabTitle(activeCount, 0);
+              updateTabTitle(0, 0);
 
               const newMap = new Map<string, string>();
               for (const task of allTasks) newMap.set(task.id, task.status);
@@ -154,8 +153,8 @@ export function useNotifications() {
               }
 
               const failedCount = data.snapshot?.summary.failed ?? 0;
-              const activeCount = data.snapshot?.summary.ready ?? 0;
-              updateTabTitle(activeCount, failedCount);
+              const blockedCount = data.snapshot?.summary.blocked ?? 0;
+              updateTabTitle(blockedCount, failedCount);
 
               const newMap = new Map<string, string>();
               for (const task of tasks) newMap.set(task.id, task.status);
