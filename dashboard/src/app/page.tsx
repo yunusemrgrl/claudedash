@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Search,
   RefreshCw,
@@ -13,6 +13,8 @@ import {
   BarChart2,
   FileText,
   Settings,
+  Keyboard,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import type { HealthResponse, UsageStats } from "@/types";
@@ -25,6 +27,7 @@ import { ActivityView } from "@/views/ActivityView";
 import { PlansLibraryView } from "@/views/PlansLibraryView";
 import { ClaudeMdView } from "@/views/ClaudeMdView";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Tooltip } from "@/components/ui/tooltip";
 
 type ViewMode = "live" | "plan" | "worktrees" | "activity" | "insights" | "plans" | "claudemd";
@@ -95,7 +98,18 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { showDeniedBanner, dismissDeniedBanner, sseConnected } = useNotifications();
+
+  useKeyboardShortcuts({
+    setMode,
+    availableModes,
+    setSearchFocused: () => searchInputRef.current?.focus(),
+    clearSearch: () => setSearchQuery(""),
+    setShowCheatsheet,
+    showCheatsheet,
+  });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -219,8 +233,9 @@ export default function Dashboard() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Filter..."
+              placeholder="Filter... (/)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring w-48"
@@ -269,6 +284,16 @@ export default function Dashboard() {
             </button>
           </Tooltip>
 
+          {/* Keyboard shortcuts */}
+          <Tooltip content="Keyboard shortcuts (?)" side="bottom">
+            <button
+              onClick={() => setShowCheatsheet(true)}
+              className="p-1.5 rounded hover:bg-sidebar-accent transition-colors"
+            >
+              <Keyboard className="size-3.5 text-muted-foreground" />
+            </button>
+          </Tooltip>
+
           {/* Refresh */}
           <Tooltip content="Reload dashboard" side="bottom">
             <button
@@ -280,6 +305,50 @@ export default function Dashboard() {
           </Tooltip>
         </div>
       </div>
+
+      {/* Keyboard shortcut cheatsheet modal */}
+      {showCheatsheet && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center"
+          onClick={() => setShowCheatsheet(false)}
+        >
+          <div
+            className="bg-background border border-border rounded-xl shadow-xl p-6 w-80 max-w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Keyboard className="size-4" /> Keyboard Shortcuts
+              </h2>
+              <button onClick={() => setShowCheatsheet(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="space-y-1 text-xs">
+              {[
+                ["L", "Live view", availableModes.live],
+                ["Q", "Queue view", availableModes.plan],
+                ["A", "Activity view", true],
+                ["D", "Docs view", true],
+                ["W", "Worktrees view", availableModes.live || availableModes.plan],
+                ["C", "Config (CLAUDE.md)", availableModes.plan],
+                ["/", "Focus search", true],
+                ["Esc", "Clear search / close", true],
+                ["?", "Toggle this cheatsheet", true],
+              ]
+                .filter(([, , show]) => show)
+                .map(([key, desc]) => (
+                  <div key={String(key)} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
+                    <span className="text-muted-foreground">{String(desc)}</span>
+                    <kbd className="px-2 py-0.5 bg-muted rounded text-[10px] font-mono text-foreground border border-border">
+                      {String(key)}
+                    </kbd>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
