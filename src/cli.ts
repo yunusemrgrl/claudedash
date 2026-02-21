@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('claudedash')
   .description('Live Kanban, quality gates and context health monitoring for Claude Code agents')
-  .version('1.1.12');
+  .version('1.1.13');
 
 program
   .command('init')
@@ -1044,6 +1044,48 @@ program
           required: ['task_id', 'status'],
         },
       },
+      {
+        name: 'register_agent',
+        description: 'Register this agent in the claudedash agent registry so it appears in the Agents view. Call at the start of a task.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            agentId: { type: 'string', description: 'Unique identifier for this agent instance' },
+            name: { type: 'string', description: 'Human-readable agent name' },
+            taskId: { type: 'string', description: 'Current task ID (e.g. S1-T1)' },
+            sessionId: { type: 'string', description: 'Claude session ID (optional)' },
+          },
+          required: ['agentId'],
+        },
+      },
+      {
+        name: 'send_heartbeat',
+        description: 'Send a heartbeat to keep this agent\'s registration alive in the dashboard (expires after 60s of silence).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            agentId: { type: 'string', description: 'Agent ID used during register_agent' },
+            status: { type: 'string', description: 'Current status (e.g. "working", "idle")' },
+            taskId: { type: 'string', description: 'Current task ID (optional update)' },
+          },
+          required: ['agentId'],
+        },
+      },
+      {
+        name: 'create_task',
+        description: 'Create a new task in queue.md. The task is appended to the specified slice (or the last slice if omitted).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            description: { type: 'string', description: 'Task description (required)' },
+            slice: { type: 'string', description: 'Slice to add the task to (e.g. "S5"). Defaults to the last slice.' },
+            area: { type: 'string', description: 'Area/category (e.g. "Dashboard", "CLI")' },
+            ac: { type: 'string', description: 'Acceptance criteria' },
+            dependsOn: { type: 'string', description: 'Task ID this task depends on (e.g. "S1-T1")' },
+          },
+          required: ['description'],
+        },
+      },
     ];
 
     async function callTool(name: string, args: Record<string, unknown>): Promise<string> {
@@ -1149,6 +1191,51 @@ program
           const { appendFileSync } = await import('fs');
           appendFileSync(logPath, entry + '\n', 'utf8');
           return `Task ${task_id} logged as ${status} to execution.log`;
+        }
+        case 'register_agent': {
+          const { agentId, name: agentName, taskId, sessionId } = args as { agentId?: string; name?: string; taskId?: string; sessionId?: string };
+          if (!agentId) return 'Error: agentId is required';
+          try {
+            const res = await fetch(`${baseUrl}/agent/register`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ agentId, name: agentName ?? agentId, taskId, sessionId }),
+              signal: AbortSignal.timeout(2000),
+            });
+            if (!res.ok) return `Error: server returned ${res.status}`;
+            return JSON.stringify(await res.json(), null, 2);
+          } catch { return 'claudedash server not running. Start with: npx claudedash start'; }
+        }
+        case 'send_heartbeat': {
+          const { agentId, status: hbStatus, taskId } = args as { agentId?: string; status?: string; taskId?: string };
+          if (!agentId) return 'Error: agentId is required';
+          try {
+            const res = await fetch(`${baseUrl}/agent/heartbeat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ agentId, ...(hbStatus ? { status: hbStatus } : {}), ...(taskId !== undefined ? { taskId } : {}) }),
+              signal: AbortSignal.timeout(2000),
+            });
+            if (!res.ok) return `Error: server returned ${res.status}`;
+            return JSON.stringify(await res.json(), null, 2);
+          } catch { return 'claudedash server not running. Start with: npx claudedash start'; }
+        }
+        case 'create_task': {
+          const { description, slice, area, ac, dependsOn } = args as { description?: string; slice?: string; area?: string; ac?: string; dependsOn?: string };
+          if (!description) return 'Error: description is required';
+          try {
+            const res = await fetch(`${baseUrl}/plan/task`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ description, ...(slice ? { slice } : {}), ...(area ? { area } : {}), ...(ac ? { ac } : {}), ...(dependsOn ? { dependsOn } : {}) }),
+              signal: AbortSignal.timeout(2000),
+            });
+            if (!res.ok) {
+              const body = await res.text();
+              return `Error: server returned ${res.status} — ${body}`;
+            }
+            return JSON.stringify(await res.json(), null, 2);
+          } catch { return 'claudedash server not running. Start with: npx claudedash start'; }
         }
         default:
           return `Unknown tool: ${name}`;
