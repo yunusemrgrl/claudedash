@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import { readSessions } from '../../core/todoReader.js';
 import { detectWorktrees, enrichWorktreeStatus } from '../../core/worktreeDetector.js';
@@ -91,6 +91,299 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       return { sessions: sessions.slice(0, 20), total: sessions.length };
     } catch {
       return reply.code(500).send({ error: 'Failed to read session metadata' });
+    }
+  });
+
+  // GET /facets — reads ~/.claude/usage-data/facets/*.json (AI-generated session analysis)
+  fastify.get('/facets', async (_req, reply) => {
+    const facetsDir = join(claudeDir, 'usage-data', 'facets');
+    if (!existsSync(facetsDir)) {
+      return { sessions: [], aggregate: null };
+    }
+    try {
+      const files = readdirSync(facetsDir).filter(f => f.endsWith('.json'));
+      const sessions: unknown[] = [];
+      const outcomeCounts: Record<string, number> = {};
+      const helpfulnessCounts: Record<string, number> = {};
+      const frictionTotals: Record<string, number> = {};
+      let satisfiedTotal = 0;
+      let dissatisfiedTotal = 0;
+
+      for (const file of files) {
+        try {
+          const raw = readFileSync(join(facetsDir, file), 'utf8');
+          const f = JSON.parse(raw) as Record<string, unknown>;
+          const sessionId = (f.session_id as string | undefined) ?? basename(file, '.json');
+
+          // Aggregate outcome
+          const outcome = (f.outcome as string | undefined) ?? 'unknown';
+          outcomeCounts[outcome] = (outcomeCounts[outcome] ?? 0) + 1;
+
+          // Aggregate helpfulness
+          const helpfulness = (f.claude_helpfulness as string | undefined) ?? 'unknown';
+          helpfulnessCounts[helpfulness] = (helpfulnessCounts[helpfulness] ?? 0) + 1;
+
+          // Aggregate friction
+          const friction = (f.friction_counts as Record<string, number> | undefined) ?? {};
+          for (const [k, v] of Object.entries(friction)) {
+            frictionTotals[k] = (frictionTotals[k] ?? 0) + v;
+          }
+
+          // Aggregate satisfaction
+          const satisfaction = (f.user_satisfaction_counts as Record<string, number> | undefined) ?? {};
+          for (const [k, v] of Object.entries(satisfaction)) {
+            if (k.includes('satisfied') && !k.includes('dis')) satisfiedTotal += v;
+            else if (k.includes('dis')) dissatisfiedTotal += v;
+          }
+
+          sessions.push({
+            sessionId,
+            outcome,
+            helpfulness,
+            sessionType: f.session_type ?? null,
+            goal: f.underlying_goal ?? null,
+            briefSummary: f.brief_summary ?? null,
+            frictionDetail: f.friction_detail ?? null,
+            frictionCounts: f.friction_counts ?? {},
+            goalCategories: f.goal_categories ?? {},
+            primarySuccess: f.primary_success ?? null,
+            satisfiedCount: satisfaction[Object.keys(satisfaction).find(k => k.includes('satisfied') && !k.includes('dis')) ?? ''] ?? 0,
+            dissatisfiedCount: satisfaction[Object.keys(satisfaction).find(k => k.includes('dis')) ?? ''] ?? 0,
+          });
+        } catch {
+          // skip malformed files
+        }
+      }
+
+      // Sort top friction
+      const topFriction = Object.entries(frictionTotals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([type, count]) => ({ type, count }));
+
+      const totalResponses = satisfiedTotal + dissatisfiedTotal;
+      return {
+        sessions,
+        aggregate: {
+          totalSessions: sessions.length,
+          outcomeCounts,
+          helpfulnessCounts,
+          topFriction,
+          satisfactionRate: totalResponses > 0 ? Math.round((satisfiedTotal / totalResponses) * 100) : null,
+          satisfiedTotal,
+          dissatisfiedTotal,
+        },
+      };
+    } catch {
+      return reply.code(500).send({ error: 'Failed to read facets data' });
+    }
+  });
+
+  // GET /conversations — parses ~/.claude/projects/ JSONL files for tool analytics
+  fastify.get('/conversations', async (_req, reply) => {
+    const projectsDir = join(claudeDir, 'projects');
+    if (!existsSync(projectsDir)) {
+      return { sessions: [], aggregate: null };
+    }
+    try {
+      interface ConvSession {
+        sessionId: string;
+        cwd: string | null;
+        projectName: string | null;
+        messageCount: number;
+        toolCounts: Record<string, number>;
+        topTools: { name: string; count: number }[];
+        errorCount: number;
+        fileOps: { read: number; write: number; edit: number };
+      }
+      const results: ConvSession[] = [];
+      const globalToolCounts: Record<string, number> = {};
+      let globalErrorCount = 0;
+
+      // Find all JSONL files across project subdirs
+      const projectDirs = readdirSync(projectsDir);
+      const jsonlFiles: string[] = [];
+      for (const pd of projectDirs) {
+        const pdPath = join(projectsDir, pd);
+        try {
+          const entries = readdirSync(pdPath).filter(f => f.endsWith('.jsonl'));
+          for (const e of entries) jsonlFiles.push(join(pdPath, e));
+        } catch { /* not a dir */ }
+      }
+
+      // Sort by mtime desc, take last 20
+      jsonlFiles.sort((a, b) => {
+        try {
+          return statSync(b).mtimeMs - statSync(a).mtimeMs;
+        } catch { return 0; }
+      });
+
+      // Process up to 20 most recent
+      for (const filePath of jsonlFiles.slice(0, 20)) {
+        try {
+          const raw = readFileSync(filePath, 'utf8');
+          const lines = raw.split('\n').filter(l => l.trim());
+          // Only read last 300 lines for performance
+          const sample = lines.slice(-300);
+
+          let cwd: string | null = null;
+          let messageCount = 0;
+          const toolCounts: Record<string, number> = {};
+          let errorCount = 0;
+          let readCount = 0, writeCount = 0, editCount = 0;
+
+          for (const line of sample) {
+            try {
+              const msg = JSON.parse(line) as Record<string, unknown>;
+              if (!cwd && msg.cwd) cwd = msg.cwd as string;
+              if (msg.type === 'user' || msg.type === 'assistant') messageCount++;
+
+              if (msg.type === 'assistant') {
+                const content = (msg.message as Record<string, unknown> | undefined)?.content;
+                if (Array.isArray(content)) {
+                  for (const block of content) {
+                    if (typeof block === 'object' && block !== null) {
+                      const b = block as Record<string, unknown>;
+                      if (b.type === 'tool_use') {
+                        const name = b.name as string;
+                        toolCounts[name] = (toolCounts[name] ?? 0) + 1;
+                        globalToolCounts[name] = (globalToolCounts[name] ?? 0) + 1;
+                        if (name === 'Read') readCount++;
+                        if (name === 'Write') writeCount++;
+                        if (name === 'Edit' || name === 'str_replace_based_edit_tool') editCount++;
+                      }
+                    }
+                  }
+                }
+              }
+
+              if (msg.type === 'user') {
+                const content = (msg.message as Record<string, unknown> | undefined)?.content;
+                if (Array.isArray(content)) {
+                  for (const block of content) {
+                    if (typeof block === 'object' && block !== null) {
+                      const b = block as Record<string, unknown>;
+                      if (b.type === 'tool_result' && b.is_error) {
+                        errorCount++;
+                        globalErrorCount++;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch { /* skip bad line */ }
+          }
+
+          const topTools = Object.entries(toolCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
+
+          const sessionId = basename(filePath, '.jsonl');
+          results.push({
+            sessionId,
+            cwd,
+            projectName: cwd ? basename(cwd) : null,
+            messageCount,
+            toolCounts,
+            topTools,
+            errorCount,
+            fileOps: { read: readCount, write: writeCount, edit: editCount },
+          });
+        } catch { /* skip bad file */ }
+      }
+
+      const topGlobalTools = Object.entries(globalToolCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, count]) => ({ name, count }));
+
+      const totalTools = Object.values(globalToolCounts).reduce((a, b) => a + b, 0);
+
+      return {
+        sessions: results,
+        aggregate: {
+          totalConversations: results.length,
+          topTools: topGlobalTools,
+          totalToolCalls: totalTools,
+          totalErrors: globalErrorCount,
+          errorRate: totalTools > 0 ? Math.round((globalErrorCount / totalTools) * 100) / 100 : 0,
+        },
+      };
+    } catch {
+      return reply.code(500).send({ error: 'Failed to read conversations' });
+    }
+  });
+
+  // GET /cost — estimates Claude API cost from stats-cache.json modelUsage
+  fastify.get('/cost', async (_req, reply) => {
+    const statsPath = join(claudeDir, 'stats-cache.json');
+    if (!existsSync(statsPath)) {
+      return reply.code(404).send({ error: 'stats-cache.json not found' });
+    }
+    // Pricing per million tokens: [input, output] in USD
+    const PRICING: Record<string, [number, number]> = {
+      'claude-opus-4': [15, 75],
+      'claude-opus-4-5': [15, 75],
+      'claude-sonnet-4': [3, 15],
+      'claude-sonnet-4-5': [3, 15],
+      'claude-sonnet-4-6': [3, 15],
+      'claude-haiku-4': [0.25, 1.25],
+      'claude-haiku-4-5': [0.25, 1.25],
+      'claude-3-5-sonnet': [3, 15],
+      'claude-3-5-sonnet-20241022': [3, 15],
+      'claude-3-5-haiku': [0.8, 4],
+      'claude-3-5-haiku-20241022': [0.8, 4],
+      'claude-3-opus': [15, 75],
+      'claude-3-sonnet': [3, 15],
+      'claude-3-haiku': [0.25, 1.25],
+    };
+    try {
+      const raw = readFileSync(statsPath, 'utf8');
+      const stats = JSON.parse(raw) as Record<string, unknown>;
+      const modelUsage = (stats.modelUsage ?? {}) as Record<string, {
+        inputTokens?: number;
+        outputTokens?: number;
+        cacheReadInputTokens?: number;
+        cacheCreationInputTokens?: number;
+      }>;
+
+      let totalCostUSD = 0;
+      const perModel = Object.entries(modelUsage).map(([model, usage]) => {
+        const inputTokens = usage.inputTokens ?? 0;
+        const outputTokens = usage.outputTokens ?? 0;
+        const cacheRead = usage.cacheReadInputTokens ?? 0;
+        const cacheCreate = usage.cacheCreationInputTokens ?? 0;
+
+        // Find pricing — try exact match then prefix match
+        let pricing = PRICING[model];
+        if (!pricing) {
+          for (const [key, p] of Object.entries(PRICING)) {
+            if (model.startsWith(key) || model.includes(key)) { pricing = p; break; }
+          }
+        }
+
+        let estimatedCostUSD: number | null = null;
+        if (pricing) {
+          const [inPrice, outPrice] = pricing;
+          // Cache read costs ~10% of input price; cache creation ~25%
+          const cost = (inputTokens / 1_000_000) * inPrice
+            + (outputTokens / 1_000_000) * outPrice
+            + (cacheRead / 1_000_000) * (inPrice * 0.1)
+            + (cacheCreate / 1_000_000) * (inPrice * 0.25);
+          estimatedCostUSD = Math.round(cost * 100) / 100;
+          totalCostUSD += cost;
+        }
+
+        return { model, inputTokens, outputTokens, cacheRead, cacheCreate, estimatedCostUSD };
+      });
+
+      return {
+        totalCostUSD: Math.round(totalCostUSD * 100) / 100,
+        perModel,
+        disclaimer: 'Estimates only — check Anthropic console for actual billing',
+      };
+    } catch {
+      return reply.code(500).send({ error: 'Failed to compute cost' });
     }
   });
 

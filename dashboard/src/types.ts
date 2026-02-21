@@ -258,6 +258,78 @@ export interface ActivitySessionsResponse {
   total: number;
 }
 
+// Facets types (from ~/.claude/usage-data/facets/)
+export interface FacetSession {
+  sessionId: string;
+  outcome: string;
+  helpfulness: string;
+  sessionType: string | null;
+  goal: string | null;
+  briefSummary: string | null;
+  frictionDetail: string | null;
+  frictionCounts: Record<string, number>;
+  goalCategories: Record<string, number>;
+  primarySuccess: string | null;
+  satisfiedCount: number;
+  dissatisfiedCount: number;
+}
+
+export interface FacetsAggregate {
+  totalSessions: number;
+  outcomeCounts: Record<string, number>;
+  helpfulnessCounts: Record<string, number>;
+  topFriction: { type: string; count: number }[];
+  satisfactionRate: number | null;
+  satisfiedTotal: number;
+  dissatisfiedTotal: number;
+}
+
+export interface FacetsResponse {
+  sessions: FacetSession[];
+  aggregate: FacetsAggregate | null;
+}
+
+// Conversation analytics types (from ~/.claude/projects/ JSONL)
+export interface ConversationSession {
+  sessionId: string;
+  cwd: string | null;
+  projectName: string | null;
+  messageCount: number;
+  toolCounts: Record<string, number>;
+  topTools: { name: string; count: number }[];
+  errorCount: number;
+  fileOps: { read: number; write: number; edit: number };
+}
+
+export interface ConversationsAggregate {
+  totalConversations: number;
+  topTools: { name: string; count: number }[];
+  totalToolCalls: number;
+  totalErrors: number;
+  errorRate: number;
+}
+
+export interface ConversationsResponse {
+  sessions: ConversationSession[];
+  aggregate: ConversationsAggregate | null;
+}
+
+// Cost types
+export interface ModelCostEntry {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheRead: number;
+  cacheCreate: number;
+  estimatedCostUSD: number | null;
+}
+
+export interface CostResponse {
+  totalCostUSD: number;
+  perModel: ModelCostEntry[];
+  disclaimer: string;
+}
+
 // Worktree types
 export interface WorktreeAssociatedTask {
   sessionId: string;
