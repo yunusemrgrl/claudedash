@@ -131,3 +131,33 @@ Priority: low
 Depends: -
 Description: `get_billing_block` ve `/billing-block`'a son billing block bilgisini ekle. Inactive durumda stats-cache'den son block'un başlangıç/bitiş zamanını ve maliyetini çıkar. Response'a şunu ekle: `{ active: false, lastBlockStartedAt?, lastBlockEndedAt?, lastBlockCostUSD? }`. stats-cache.json formatını incele, bu bilgi varsa parse et. Yoksa bu alanları atlayabilir.
 AC: Son billing block sonrası `get_billing_block` → `lastBlockEndedAt` + `lastBlockCostUSD` dolu. Bilgi yoksa alanlar atlanıyor (undefined değil, tamamen yok).
+
+# Slice S15 — React Doctor Fixes
+
+## S15-T1
+Area: Dashboard
+Priority: high
+Depends: -
+Description: Dead code temizliği. react-doctor/knip tespitleri: (1) 4 kullanılmayan CSS dosyasını sil: src/styles/fonts.css, index.css, tailwind.css, theme.css. (2) scroll-area.tsx'ten kullanılmayan ScrollBar export'unu kaldır. (3) status.ts'teki kullanılmayan export'u kaldır. (4) src/types.ts'teki kullanılmayan Task tipini kaldır.
+AC: react-doctor dead code uyarıları sıfır. Build başarılı. lint temiz.
+
+## S15-T2
+Area: Dashboard
+Priority: high
+Depends: -
+Description: Array index key buglarını düzelt. 6 yerde `key={i}` (index) kullanılıyor: WorktreePanel.tsx:176, PlansLibraryView.tsx:73, PlanView.tsx:292+452, ActivityView.tsx:668, QualityTimeline.tsx:80. Her birinde listedeki nesnenin stable bir alanını key olarak kullan (name, path, id, timestamp vb.).
+AC: Tüm .map() çağrılarında index yerine stable key. react-doctor uyarısı sıfır.
+
+## S15-T3
+Area: Dashboard
+Priority: critical
+Depends: -
+Description: fetch()+useEffect'te AbortController eksikliğini düzelt (4 hata). page.tsx:117 (usage fetch), page.tsx:124 (health fetch), PlanView.tsx:422 (quality-timeline fetch), LiveView.tsx:73 (worktrees fetch). Her useEffect'te AbortController oluştur, fetch'e signal ver, cleanup'ta abort() çağır. Bu memory leak ve setState-after-unmount hatalarını önler.
+AC: 4 fetch+useEffect'in tamamında AbortController var. react-doctor error sayısı 0.
+
+## S15-T4
+Area: Dashboard
+Priority: medium
+Depends: -
+Description: a11y + hydration uyarılarını gider. (1) page.tsx:311 ve 315: modal overlay div'lerinde onClick var ama keyboard handler yok — onKeyDown ekle veya div'i button'a çevir. (2) page.tsx:114: useEffect(setState,[]) mount flash — mounted state'e suppressHydrationWarning ekle ya da pattern'ı düzelt.
+AC: jsx-a11y uyarıları 0. Hydration flicker uyarısı 0. react-doctor skoru ≥95.

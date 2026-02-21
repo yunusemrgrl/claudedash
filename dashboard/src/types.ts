@@ -1,7 +1,7 @@
 // Plan mode types (queue.md)
 export type TaskStatus = "READY" | "BLOCKED" | "DONE" | "FAILED";
 
-export interface Task {
+interface Task {
   id: string;
   slice: string;
   area: string;
