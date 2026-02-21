@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { readSessions } from '../../core/todoReader.js';
 import { buildContextHealth } from '../../core/contextHealth.js';
@@ -115,6 +115,87 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
     const found = sessions.find(s => s.id === id);
     if (!found) return reply.code(404).send({ error: 'Session not found' });
     return { command: `claude resume ${id}`, sessionId: id };
+  });
+
+  // GET /sessions/:id/context — session JSONL summary (last N messages)
+  fastify.get<{ Params: { id: string } }>('/sessions/:id/context', async (request, reply) => {
+    const { id } = request.params;
+
+    // Find JSONL file in ~/.claude/projects/*/*
+    const projectsDir = join(claudeDir, 'projects');
+    let jsonlPath: string | null = null;
+    if (existsSync(projectsDir)) {
+      try {
+        for (const dir of readdirSync(projectsDir)) {
+          const candidate = join(projectsDir, dir, `${id}.jsonl`);
+          if (existsSync(candidate)) { jsonlPath = candidate; break; }
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!jsonlPath) return reply.code(404).send({ error: 'Session JSONL not found' });
+
+    try {
+      const raw = readFileSync(jsonlPath, 'utf-8');
+      const allLines = raw.split('\n').filter(l => l.trim());
+      // Only read last 500 lines to avoid OOM on huge files
+      const lines = allLines.slice(-500);
+      const messageCount = allLines.length;
+
+      let lastUserPrompt: string | null = null;
+      let lastAssistantSummary: string | null = null;
+      const toolCounts: Record<string, number> = {};
+
+      for (const line of lines) {
+        try {
+          const obj = JSON.parse(line) as Record<string, unknown>;
+          const msg = obj.message as Record<string, unknown> | undefined;
+          const role = obj.type as string | undefined;
+
+          if (role === 'user' && msg) {
+            const content = msg.content;
+            if (typeof content === 'string') {
+              lastUserPrompt = content.slice(0, 300);
+            } else if (Array.isArray(content)) {
+              const textBlock = (content as Array<Record<string, unknown>>).find(b => b.type === 'text');
+              if (textBlock && typeof textBlock.text === 'string') {
+                lastUserPrompt = textBlock.text.slice(0, 300);
+              }
+            }
+          }
+
+          if (role === 'assistant' && msg) {
+            const content = msg.content;
+            if (Array.isArray(content)) {
+              for (const block of content as Array<Record<string, unknown>>) {
+                if (block.type === 'text' && typeof block.text === 'string') {
+                  lastAssistantSummary = block.text.slice(0, 300);
+                }
+                if (block.type === 'tool_use' && typeof block.name === 'string') {
+                  toolCounts[block.name] = (toolCounts[block.name] ?? 0) + 1;
+                }
+              }
+            }
+          }
+        } catch { /* skip malformed lines */ }
+      }
+
+      const recentTools = Object.entries(toolCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([name]) => name);
+
+      return {
+        sessionId: id,
+        messageCount,
+        lastUserPrompt,
+        lastAssistantSummary,
+        toolCounts,
+        recentTools,
+      };
+    } catch {
+      return reply.code(500).send({ error: 'Failed to parse session JSONL' });
+    }
   });
 
   // POST /hook — receives Claude Code hook events, fans out via SSE, stores in ring buffer

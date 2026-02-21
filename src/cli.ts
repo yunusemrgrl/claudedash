@@ -985,6 +985,15 @@ program
         inputSchema: { type: 'object', properties: {}, required: [] },
       },
       {
+        name: 'get_session_context',
+        description: 'Get a summary of a session\'s conversation: message count, last user prompt, last assistant response, tool usage counts.',
+        inputSchema: {
+          type: 'object',
+          properties: { sessionId: { type: 'string', description: 'Session ID to retrieve context for' } },
+          required: ['sessionId'],
+        },
+      },
+      {
         name: 'log_task',
         description: 'Log a task result to the execution log. Use this after completing, failing, or getting blocked on a task.',
         inputSchema: {
@@ -1067,6 +1076,13 @@ program
             return tb - ta;
           });
           return JSON.stringify({ ...sorted[0], isCurrent: true, matchMethod: 'most-recent' }, null, 2);
+        }
+        case 'get_session_context': {
+          const { sessionId } = args as { sessionId?: string };
+          if (!sessionId) return 'Error: sessionId is required';
+          const data = await tryFetch<unknown>(`/sessions/${encodeURIComponent(sessionId)}/context`);
+          if (!data) return 'claudedash server not running. Start with: npx claudedash start';
+          return JSON.stringify(data, null, 2);
         }
         case 'log_task': {
           const { task_id, status, reason, agent } = args as { task_id?: string; status?: string; reason?: string; agent?: string };
