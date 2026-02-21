@@ -5,6 +5,19 @@
 - Do not create new files unless absolutely necessary.
 - Do not create shell scripts unless explicitly requested.
 
+## Pre-Commit Checklist (MANDATORY)
+
+Before every `git commit`, run ALL of the following in order. Do NOT skip any step.
+
+```
+npm run lint        # ESLint — must pass with 0 errors
+npx tsc --noEmit    # TypeScript check (server/CLI)
+cd dashboard && npx tsc --noEmit && cd ..  # TypeScript check (dashboard)
+npm run build       # Full build — must succeed
+```
+
+If any step fails: fix the error first, then re-run from the beginning. Never commit with lint or type errors.
+
 ## Workflow
 
 - If workflow documents, task documents, predefined plans, or execution specs exist in the repository, follow them autonomously.

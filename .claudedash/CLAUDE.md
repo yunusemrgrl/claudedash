@@ -45,3 +45,14 @@ Register once: `claude mcp add claudedash -- npx -y claudedash@latest mcp`
 ## Quick Status
 
 `npx claudedash status` — single-line summary without opening the browser.
+
+## Pre-Commit Checklist (MANDATORY)
+
+Run ALL of these before every commit. Never skip.
+
+```
+npm run lint                              # 0 errors required
+npx tsc --noEmit                          # server/CLI types
+cd dashboard && npx tsc --noEmit && cd .. # dashboard types
+npm run build                             # full build must succeed
+```

@@ -1117,7 +1117,7 @@ program
         } else if (req.method === 'tools/call') {
           const params = (req.params ?? {}) as ToolCallParams;
           pendingCount++;
-          callTool(params.name ?? '', params.arguments ?? {}).then((text) => {
+          void callTool(params.name ?? '', params.arguments ?? {}).then((text) => {
             respond(req.id, { content: [{ type: 'text', text }] });
           }).finally(() => {
             pendingCount--;
