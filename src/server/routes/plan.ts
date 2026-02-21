@@ -140,29 +140,44 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
   });
 
   fastify.post<{
-    Body: { subject: string; priority?: string; dependsOn?: string };
+    Body: { description: string; slice?: string; area?: string; priority?: string; dependsOn?: string; ac?: string };
   }>('/plan/task', async (request, reply) => {
     if (!planDir) return reply.code(400).send({ error: 'Plan mode not configured' });
 
-    const { subject, priority = 'medium', dependsOn = '-' } = request.body ?? {};
-    if (!subject || typeof subject !== 'string' || !subject.trim()) {
-      return reply.code(400).send({ error: 'subject is required' });
+    const { description, slice, area = 'General', priority = 'medium', dependsOn = '-', ac = '-' } = request.body ?? {};
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return reply.code(400).send({ error: 'description is required' });
     }
 
     const queuePath = join(planDir, 'queue.md');
     if (!existsSync(queuePath)) return reply.code(400).send({ error: 'queue.md not found' });
 
-    // Determine next task ID (count existing ## S\d+-T\d+ headers)
     const existing = readFileSync(queuePath, 'utf-8');
-    const ids = [...existing.matchAll(/^## (S\d+-T\d+)/gm)].map(m => m[1]);
-    const last = ids[ids.length - 1];
-    let nextId = 'S1-T1';
-    if (last) {
-      const m = /S(\d+)-T(\d+)/.exec(last);
-      if (m) nextId = `S${m[1]}-T${parseInt(m[2]) + 1}`;
+    const allIds = [...existing.matchAll(/^## (S(\d+)-T(\d+))/gm)].map(m => ({
+      full: m[1], s: parseInt(m[2]), t: parseInt(m[3]),
+    }));
+
+    let nextId: string;
+    if (slice) {
+      // Find the slice number from the slice label (e.g. "S5" → 5)
+      const sNum = /^S?(\d+)$/i.exec(slice.trim())?.[1];
+      if (sNum) {
+        const sliceN = parseInt(sNum);
+        const inSlice = allIds.filter(x => x.s === sliceN);
+        const maxT = inSlice.length > 0 ? Math.max(...inSlice.map(x => x.t)) : 0;
+        nextId = `S${sliceN}-T${maxT + 1}`;
+      } else {
+        // Non-numeric slice label — fall back to last task +1
+        const last = allIds[allIds.length - 1];
+        nextId = last ? `S${last.s}-T${last.t + 1}` : 'S1-T1';
+      }
+    } else {
+      // No slice specified — append to last slice
+      const last = allIds[allIds.length - 1];
+      nextId = last ? `S${last.s}-T${last.t + 1}` : 'S1-T1';
     }
 
-    const newBlock = `\n## ${nextId}\nArea: General\nPriority: ${priority}\nDepends: ${dependsOn}\nDescription: ${subject.trim()}\nAC: -\n`;
+    const newBlock = `\n## ${nextId}\nArea: ${area.trim()}\nPriority: ${priority}\nDepends: ${dependsOn}\nDescription: ${description.trim()}\nAC: ${ac.trim() || '-'}\n`;
     try {
       appendFileSync(queuePath, newBlock, 'utf-8');
     } catch {
@@ -171,7 +186,7 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
 
     if (emitter) emitter.emit('change', { type: 'plan', timestamp: new Date().toISOString() });
 
-    return { ok: true, task_id: nextId, subject: subject.trim() };
+    return { ok: true, task_id: nextId, description: description.trim() };
   });
 
   fastify.patch<{

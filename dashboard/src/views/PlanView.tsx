@@ -348,7 +348,10 @@ export function PlanView({
   const [qualityEvents, setQualityEvents] = useState<QualityEvent[]>([]);
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newSubject, setNewSubject] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newSlice, setNewSlice] = useState("");
+  const [newArea, setNewArea] = useState("");
+  const [newAC, setNewAC] = useState("");
   const [addingTask, setAddingTask] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
     if (typeof window === "undefined") return "list";
@@ -361,16 +364,23 @@ export function PlanView({
   }, [viewMode]);
 
   const addTask = async () => {
-    if (!newSubject.trim()) return;
+    if (!newDesc.trim()) return;
     setAddingTask(true);
     try {
+      const body: Record<string, string> = { description: newDesc.trim() };
+      if (newSlice.trim()) body.slice = newSlice.trim();
+      if (newArea.trim()) body.area = newArea.trim();
+      if (newAC.trim()) body.ac = newAC.trim();
       const res = await fetch("/plan/task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: newSubject.trim() }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
-        setNewSubject("");
+        setNewDesc("");
+        setNewSlice("");
+        setNewArea("");
+        setNewAC("");
         setShowAddForm(false);
         void refresh();
       }
@@ -513,31 +523,56 @@ export function PlanView({
         <div className="px-3 py-2 border-b border-sidebar-border shrink-0">
           {showAddForm ? (
             <div className="space-y-2">
-              <input
+              <textarea
                 autoFocus
-                type="text"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void addTask();
-                  if (e.key === "Escape") { setShowAddForm(false); setNewSubject(""); }
+                  if (e.key === "Escape") { setShowAddForm(false); setNewDesc(""); setNewSlice(""); setNewArea(""); setNewAC(""); }
                 }}
-                placeholder="Task title..."
+                placeholder="Description (required)..."
+                rows={2}
+                className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring resize-none"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={newSlice}
+                  onChange={(e) => setNewSlice(e.target.value)}
+                  className="flex-1 bg-background border border-border rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-ring"
+                >
+                  <option value="">Slice (last)</option>
+                  {Object.keys(snapshot.slices).map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={newArea}
+                  onChange={(e) => setNewArea(e.target.value)}
+                  placeholder="Area"
+                  className="flex-1 bg-background border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring"
+                />
+              </div>
+              <input
+                type="text"
+                value={newAC}
+                onChange={(e) => setNewAC(e.target.value)}
+                placeholder="Acceptance criteria (optional)"
                 className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring"
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => void addTask()}
-                  disabled={!newSubject.trim() || addingTask}
+                  disabled={!newDesc.trim() || addingTask}
                   className="flex-1 text-xs py-1 rounded bg-chart-2/10 text-chart-2 border border-chart-2/20 hover:bg-chart-2/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {addingTask ? "Adding…" : "Add"}
+                  {addingTask ? "Adding…" : "Add task"}
                 </button>
                 <button
-                  onClick={() => { setShowAddForm(false); setNewSubject(""); }}
+                  onClick={() => { setShowAddForm(false); setNewDesc(""); setNewSlice(""); setNewArea(""); setNewAC(""); }}
                   className="text-xs py-1 px-2 rounded text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Cancel
+                  <X className="size-3" />
                 </button>
               </div>
             </div>
