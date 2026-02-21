@@ -1,4 +1,4 @@
-name: Auto Tag on Version Bump
+name: Release on Version Bump
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
       - "package.json"
 
 jobs:
-  tag:
-    name: Create version tag
+  release:
+    name: Tag + npm publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,11 +18,18 @@ jobs:
         with:
           fetch-depth: 2
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
       - name: Read version from package.json
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "plain=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Check if tag already exists
         id: tag_check
@@ -33,7 +40,29 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create and push tag
+      - name: Install dependencies
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Install dashboard dependencies
+        if: steps.tag_check.outputs.exists == 'false'
+        run: cd dashboard && npm ci
+
+      - name: Run tests
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm test
+
+      - name: Build
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm run build
+
+      - name: Publish to npm
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create and push git tag
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
