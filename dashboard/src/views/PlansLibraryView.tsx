@@ -68,9 +68,9 @@ function SimpleMarkdown({ content }: { content: string }) {
       const parts = line.split(/(`[^`]+`)/g);
       elements.push(
         <p key={key++} className="text-xs text-muted-foreground mb-0.5">
-          {parts.map((p, i) =>
+          {parts.map((p) =>
             p.startsWith("`") && p.endsWith("`")
-              ? <code key={i} className="bg-muted px-1 rounded text-[11px] font-mono text-foreground">{p.slice(1, -1)}</code>
+              ? <code key={p} className="bg-muted px-1 rounded text-[11px] font-mono text-foreground">{p.slice(1, -1)}</code>
               : p
           )}
         </p>

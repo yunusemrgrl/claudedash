@@ -664,8 +664,8 @@ function HookFeedSection({ events, hasHooks }: { events: HookEvent[]; hasHooks: 
         Live Tool Events ({events.length})
       </h4>
       <div className="space-y-1 max-h-64 overflow-y-auto">
-        {events.slice(0, 50).map((e, i) => (
-          <div key={i} className="flex items-center gap-2 text-[11px] py-0.5">
+        {events.slice(0, 50).map((e) => (
+          <div key={e.receivedAt} className="flex items-center gap-2 text-[11px] py-0.5">
             <span className="shrink-0">{TOOL_EMOJI[e.tool ?? ""] ?? "🔧"}</span>
             <span className="font-medium text-foreground">{e.tool ?? e.event}</span>
             {e.session && <span className="text-muted-foreground/50 font-mono">{e.session.slice(0, 6)}</span>}

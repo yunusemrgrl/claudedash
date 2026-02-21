@@ -171,9 +171,9 @@ function WorktreeDetail({ wt }: { wt: WorktreeState }) {
               <p className="text-xs text-muted-foreground/40 py-2">No tasks associated with this worktree</p>
             ) : (
               <div className="space-y-2">
-                {wt.associatedTasks!.map((t, i) => (
+                {wt.associatedTasks!.map((t) => (
                   <div
-                    key={`${t.sessionId}-${t.taskId}-${i}`}
+                    key={`${t.sessionId}-${t.taskId}`}
                     className="flex items-center gap-2 p-3 rounded bg-card border border-border"
                   >
                     <span className="font-mono text-xs text-muted-foreground shrink-0">#{t.taskId}</span>

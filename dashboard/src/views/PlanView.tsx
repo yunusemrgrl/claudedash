@@ -288,8 +288,8 @@ function TaskDetailPanel({
 
                 {Array.isArray(task.lastEvent.meta?.steps) && (
                   <div className="pt-2 border-t border-border space-y-1">
-                    {(task.lastEvent.meta.steps as Array<{ type: string; name: string; summary: string; duration: number }>).map((step, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-background/50">
+                    {(task.lastEvent.meta.steps as Array<{ type: string; name: string; summary: string; duration: number }>).map((step) => (
+                      <div key={`${step.type}-${step.name}`} className="flex items-start gap-2 py-1 px-1.5 rounded hover:bg-background/50">
                         <div className="mt-0.5">
                           {step.type === "thought" && <Brain className="size-3 text-chart-4" />}
                           {step.type === "tool_call" && <Wrench className="size-3 text-chart-1" />}
@@ -448,8 +448,8 @@ export function PlanView({
               {data?.queueErrors?.length ? "Queue Parse Errors" : "Plan Mode Not Available"}
             </h2>
             <div className="space-y-2">
-              {data?.queueErrors?.map((err, i) => (
-                <div key={i} className="text-destructive-foreground text-sm">{err}</div>
+              {data?.queueErrors?.map((err) => (
+                <div key={err} className="text-destructive-foreground text-sm">{err}</div>
               )) || (
                 <div className="text-muted-foreground text-sm">
                   Run &quot;claudedash init&quot; to set up Plan mode

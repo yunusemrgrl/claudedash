@@ -70,14 +70,14 @@ export function QualityTimeline({ events }: { events: QualityEvent[] }) {
 
   return (
     <div className="space-y-2">
-      {events.map((event, i) => {
+      {events.map((event) => {
         const checks = event.checks;
         const allPassed = Object.values(checks).every(Boolean);
         const hasFailure = Object.values(checks).some((v) => v === false);
 
         return (
           <div
-            key={`${event.timestamp}-${i}`}
+            key={`${event.timestamp}-${event.file}`}
             className={`p-3 rounded-lg border transition-colors ${
               hasFailure
                 ? "bg-chart-5/5 border-chart-5/20"
