@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { HealthResponse, UsageStats } from "@/types";
+import pkg from "../../../package.json";
 import { WorktreePanel } from "@/components/WorktreePanel";
 import { LiveView } from "@/views/LiveView";
 import { PlanView } from "@/views/PlanView";
@@ -181,7 +182,7 @@ export default function Dashboard() {
 
           <div className="flex items-baseline gap-2">
             <h1 className="text-lg font-semibold text-foreground">claudedash</h1>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v1.0.0</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v{pkg.version}</span>
           </div>
 
           {/* Main nav tabs */}
