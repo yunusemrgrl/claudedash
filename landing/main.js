@@ -394,4 +394,33 @@ window.addEventListener('DOMContentLoaded', () => {
   initStarButton();
   initNavScroll();
   initParallax();
+  initScreenshotTabs();
 });
+
+// ── Screenshot tab gallery ──────────────────────────────
+function initScreenshotTabs() {
+  const tabs = $$('#sc-tabs .sc-tab');
+  const slides = $$('#sc-slides .sc-slide');
+  if (!tabs.length) return;
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+
+      // Update tabs
+      tabs.forEach(t => t.classList.remove('sc-tab-active'));
+      tab.classList.add('sc-tab-active');
+
+      // Update slides
+      slides.forEach(slide => {
+        const isActive = slide.dataset.slide === target;
+        slide.classList.toggle('sc-slide-active', isActive);
+        // Autoplay video when shown, pause when hidden
+        if (slide.tagName === 'VIDEO') {
+          if (isActive) { slide.play().catch(() => {}); }
+          else { slide.pause(); }
+        }
+      });
+    });
+  });
+}

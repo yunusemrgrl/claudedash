@@ -20,7 +20,7 @@ npx -y claudedash@latest start
 
 That's it. Open `localhost:4317`. Watch your agent work.
 
-![claudedash demo](docs/screenrecord.gif)
+![claudedash demo](landing/assets/activitiy.mp4)
 
 ## How it works
 
@@ -47,9 +47,13 @@ Or run `claudedash init` — it generates a ready-to-use `CLAUDE.md` snippet.
 
 Live mode is the default. Plan mode adds dependencies, acceptance criteria, and execution tracking on top.
 
-| Live mode | Plan mode |
-|---|---|
-| ![Live](docs/screenshot-1.png) | ![Plan](docs/screenshot-2.png) |
+| Live | Queue | Activity |
+|---|---|---|
+| ![Live](landing/assets/live.png) | ![Queue](landing/assets/queue.png) | ![Activity](landing/assets/activitiy.mp4) |
+
+| Worktrees | Config | Docs |
+|---|---|---|
+| ![Worktrees](landing/assets/worktrees.png) | ![Config](landing/assets/config.png) | ![Docs](landing/assets/docs.png) |
 
 ## Install
 

@@ -824,6 +824,52 @@ code {
 .sc-lock { font-style: normal; margin-right: 4px; }
 .sc-spacer { flex: 1; }
 
+/* Screenshot tab switcher */
+.sc-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sc-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sc-tab:hover {
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.sc-tab.sc-tab-active {
+  background: rgba(0, 245, 255, 0.08);
+  border-color: var(--border-accent);
+  color: var(--cyan);
+}
+
+/* Slides container */
+.sc-slides {
+  position: relative;
+}
+
+.sc-slide {
+  display: none;
+  width: 100%;
+  border-radius: 0;
+}
+
+.sc-slide.sc-slide-active {
+  display: block;
+}
+
 .sc-img {
   width: 100%;
   border-radius: 0;

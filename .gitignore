@@ -17,4 +17,8 @@ brief.md
 dashboard/next-env.d.ts
 docs/dev-log.md
 *.png
+# Landing page assets are tracked
+!landing/assets/*.png
+!landing/assets/*.gif
+!landing/assets/*.mp4
 .claudedash/execution.log

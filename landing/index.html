@@ -385,6 +385,16 @@
           </p>
 
           <div class="screenshot-wrap" data-animate>
+            <!-- Tab switcher -->
+            <div class="sc-tabs" id="sc-tabs">
+              <button class="sc-tab sc-tab-active" data-tab="live">Live</button>
+              <button class="sc-tab" data-tab="queue">Queue</button>
+              <button class="sc-tab" data-tab="worktrees">Worktrees</button>
+              <button class="sc-tab" data-tab="activity">Activity</button>
+              <button class="sc-tab" data-tab="config">Config</button>
+              <button class="sc-tab" data-tab="docs">Docs</button>
+            </div>
+
             <div class="screenshot-chrome">
               <div class="sc-bar">
                 <div class="sc-dots">
@@ -395,11 +405,47 @@
                 </div>
                 <div class="sc-spacer"></div>
               </div>
-              <img
-                src="assets/screenshot-1.png"
-                alt="claudedash dashboard — live kanban with sessions sidebar and context health bar"
-                class="sc-img"
-              />
+              <div class="sc-slides" id="sc-slides">
+                <img
+                  src="assets/live.png"
+                  alt="claudedash Live view — session kanban with context health bars"
+                  class="sc-img sc-slide sc-slide-active"
+                  data-slide="live"
+                />
+                <img
+                  src="assets/queue.png"
+                  alt="claudedash Queue view — task planning with dependencies"
+                  class="sc-img sc-slide"
+                  data-slide="queue"
+                />
+                <img
+                  src="assets/worktrees.png"
+                  alt="claudedash Worktrees view — git worktree observability"
+                  class="sc-img sc-slide"
+                  data-slide="worktrees"
+                />
+                <video
+                  src="assets/activitiy.mp4"
+                  class="sc-img sc-slide"
+                  data-slide="activity"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                ></video>
+                <img
+                  src="assets/config.png"
+                  alt="claudedash Config view"
+                  class="sc-img sc-slide"
+                  data-slide="config"
+                />
+                <img
+                  src="assets/docs.png"
+                  alt="claudedash Docs view"
+                  class="sc-img sc-slide"
+                  data-slide="docs"
+                />
+              </div>
             </div>
             <div class="sc-caption">
               <span class="sc-dot"></span>
@@ -501,8 +547,8 @@
           </div>
           <div class="wt-media" data-animate>
             <img
-              src="assets/screenshot-2.png"
-              alt="claudedash insights panel and worktree visibility"
+              src="assets/worktrees.png"
+              alt="claudedash Worktrees tab — git worktree observability with branch status"
             />
           </div>
         </div>
