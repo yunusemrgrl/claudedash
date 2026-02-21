@@ -110,7 +110,28 @@ Implement the task.
 
 ## Phase 3 — LOG
 
-Append result to \`.claudedash/execution.log\` (one JSON line):
+Record the result. **Preferred: HTTP** (when claudedash server is running). **Fallback: file** (append to execution.log directly).
+
+### Option A — HTTP (preferred when server is running on port 4317)
+
+\`\`\`bash
+# Success
+curl -sf -X POST http://localhost:4317/log \\
+  -H 'Content-Type: application/json' \\
+  -d '{"task_id":"S1-T1","status":"DONE","agent":"claude"}' || true
+
+# Failure
+curl -sf -X POST http://localhost:4317/log \\
+  -H 'Content-Type: application/json' \\
+  -d '{"task_id":"S1-T1","status":"FAILED","agent":"claude","reason":"tests failing"}' || true
+
+# Blocked (triggers real-time browser notification)
+curl -sf -X POST http://localhost:4317/log \\
+  -H 'Content-Type: application/json' \\
+  -d '{"task_id":"S1-T1","status":"BLOCKED","agent":"claude","reason":"missing API key"}' || true
+\`\`\`
+
+### Option B — File (fallback, append one JSON line)
 
 Success:
 \`\`\`json
@@ -126,6 +147,19 @@ Blocked:
 \`\`\`json
 {"task_id":"S1-T1","status":"BLOCKED","reason":"missing API key","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 \`\`\`
+
+---
+
+## Phase 3b — CHECK QUEUE (optional, when server is running)
+
+Get computed task statuses with dependency resolution:
+
+\`\`\`bash
+curl -sf http://localhost:4317/queue
+# Returns: { tasks: [...], summary: { total, done, failed, blocked, ready } }
+\`\`\`
+
+Use this instead of manually parsing queue.md + execution.log.
 
 ---
 
@@ -170,12 +204,20 @@ Follow \`.claudedash/workflow.md\` for structured task execution.
 Tasks are defined in \`.claudedash/queue.md\`.
 Log progress to \`.claudedash/execution.log\`.
 
-Log format (append one JSON line per task):
+Log format — prefer HTTP when server is running (port 4317):
+\`\`\`bash
+curl -sf -X POST http://localhost:4317/log \\
+  -H 'Content-Type: application/json' \\
+  -d '{"task_id":"S1-T1","status":"DONE","agent":"claude"}' || true
+\`\`\`
+
+Fallback (append one JSON line to \`.claudedash/execution.log\`):
 \`\`\`json
 {"task_id":"S1-T1","status":"DONE","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 \`\`\`
 
-Status values: \`DONE\`, \`FAILED\`, \`BLOCKED\` (requires \`reason\` field)
+Status values: \`DONE\`, \`FAILED\`, \`BLOCKED\` (requires \`reason\` field).
+See \`.claudedash/workflow.md\` for full execution protocol.
 
 ## Dashboard
 

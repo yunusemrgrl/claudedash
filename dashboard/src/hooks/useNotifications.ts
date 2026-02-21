@@ -115,6 +115,17 @@ export function useNotifications() {
             });
         }
 
+        if (parsed.type === "task-blocked") {
+          const ev = parsed as { type: string; task_id?: string; reason?: string; agent?: string };
+          const key = `blocked:${ev.task_id}:${ev.reason ?? ""}`;
+          if (!notifiedSet.current.has(key)) {
+            notifiedSet.current.add(key);
+            const title = `Task BLOCKED: ${ev.task_id ?? "?"}`;
+            const body = ev.reason ? `${ev.reason}` : `Reported by ${ev.agent ?? "agent"}`;
+            notify(title, body);
+          }
+        }
+
         if (parsed.type === "plan") {
           void fetch("/snapshot")
             .then((r) => r.json())

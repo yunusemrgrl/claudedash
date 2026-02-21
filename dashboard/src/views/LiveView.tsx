@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Copy, Check, RotateCcw } from "lucide-react";
-import type { ClaudeSession, ClaudeTask, TokenUsage } from "@/types";
+import type { ClaudeSession, ClaudeTask, TokenUsage, QueueSummary, AgentRecord } from "@/types";
 import { ContextHealthMini, ContextHealthWidget } from "@/components/ContextHealthWidget";
 import { TypingPrompt } from "@/components/TypingPrompt";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +25,25 @@ export function LiveView({
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [resumeToast, setResumeToast] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [queueSummary, setQueueSummary] = useState<QueueSummary | null>(null);
+  const [agents, setAgents] = useState<AgentRecord[]>([]);
+
+  // Poll agent API data every 15 seconds
+  useEffect(() => {
+    function fetchAgentData() {
+      void fetch("/queue")
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d && !d.errors?.length) setQueueSummary(d.summary as QueueSummary); })
+        .catch(() => {});
+      void fetch("/agents")
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d?.agents) setAgents(d.agents as AgentRecord[]); })
+        .catch(() => {});
+    }
+    fetchAgentData();
+    const iv = setInterval(fetchAgentData, 15_000);
+    return () => clearInterval(iv);
+  }, []);
 
   const CLAUDE_MD_SNIPPET = `You MUST use the TodoWrite tool to track your work.\nAt the START of any multi-step task, create a todo list with all steps.\nMark each task in_progress before starting, completed after finishing.`;
 
@@ -284,6 +303,42 @@ export function LiveView({
             ))}
           </div>
         </ScrollArea>
+
+        {/* Agent API footer panel */}
+        {(queueSummary || agents.length > 0) && (
+          <div className="border-t border-sidebar-border p-2 space-y-2 shrink-0">
+            {queueSummary && (
+              <div className="space-y-1">
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Queue</span>
+                <div className="flex flex-wrap gap-1 text-[9px]">
+                  {queueSummary.ready > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-chart-2/15 text-chart-2 font-medium">{queueSummary.ready} READY</span>
+                  )}
+                  {queueSummary.done > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{queueSummary.done} DONE</span>
+                  )}
+                  {queueSummary.blocked > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-chart-5/15 text-chart-5 font-semibold">{queueSummary.blocked} BLOCKED</span>
+                  )}
+                  {queueSummary.failed > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-destructive/15 text-destructive">{queueSummary.failed} FAILED</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {agents.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">Agents</span>
+                {agents.map((a) => (
+                  <div key={a.agentId} className={`text-[9px] leading-tight ${a.isStale ? "opacity-40" : ""}`}>
+                    <span className="font-medium text-foreground truncate block">{a.name}</span>
+                    {a.taskId && <span className="text-muted-foreground">{a.taskId}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Kanban Board */}

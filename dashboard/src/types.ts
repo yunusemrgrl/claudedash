@@ -388,6 +388,44 @@ export interface HookEventsResponse {
   events: HookEvent[];
 }
 
+// Agent API types
+export interface AgentRecord {
+  agentId: string;
+  name: string;
+  sessionId: string | null;
+  taskId: string | null;
+  status: string;
+  registeredAt: string;
+  lastSeen: string;
+  isStale: boolean;
+}
+
+export interface QueueSummary {
+  total: number;
+  done: number;
+  failed: number;
+  blocked: number;
+  ready: number;
+}
+
+export interface AgentsResponse {
+  agents: AgentRecord[];
+}
+
+export interface QueueResponse {
+  tasks: {
+    id: string;
+    area: string;
+    slice: string;
+    description: string;
+    dependsOn: string[];
+    status: string;
+    lastEvent: unknown;
+  }[];
+  summary: QueueSummary;
+  errors: string[];
+}
+
 // Worktree types
 export interface WorktreeAssociatedTask {
   sessionId: string;

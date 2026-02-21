@@ -208,6 +208,153 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
     return { ok: true, task_id: taskId, status };
   });
 
+  // POST /log — agent HTTP execution log append (ai_feedback.md #3)
+  fastify.post<{ Body: { task_id?: string; status?: string; agent?: string; reason?: string; meta?: unknown } }>(
+    '/log', async (request, reply) => {
+      if (!agentScopeDir) return reply.code(404).send({ error: 'Plan mode not configured. Run claudedash init first.' });
+
+      const { task_id, status, agent = 'agent', reason, meta } = request.body ?? {};
+      if (!task_id) return reply.code(400).send({ error: 'task_id is required' });
+      if (!status || !['DONE', 'FAILED', 'BLOCKED'].includes(status)) {
+        return reply.code(400).send({ error: 'status must be DONE, FAILED, or BLOCKED' });
+      }
+
+      const logPath = join(agentScopeDir, 'execution.log');
+      const entry: Record<string, unknown> = {
+        task_id,
+        status,
+        timestamp: new Date().toISOString(),
+        agent,
+      };
+      if (reason) entry.reason = reason;
+      if (meta) entry.meta = meta;
+
+      try {
+        appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf-8');
+      } catch {
+        return reply.code(500).send({ error: 'Failed to write to execution.log' });
+      }
+
+      // SSE: always push plan change; also push blocked event for dashboard notification
+      const now = new Date().toISOString();
+      if (emitter) {
+        emitter.emit('change', { type: 'plan', timestamp: now });
+        if (status === 'BLOCKED') {
+          emitter.emit('change', {
+            type: 'task-blocked',
+            task_id,
+            reason: reason ?? null,
+            agent,
+            timestamp: now,
+          });
+        }
+      }
+
+      return { ok: true, task_id, status, timestamp: now };
+    }
+  );
+
+  // GET /queue — computed queue snapshot for agents (ai_feedback.md #1)
+  fastify.get('/queue', async () => {
+    if (!agentScopeDir) {
+      return { tasks: [], summary: { total: 0, done: 0, failed: 0, blocked: 0, ready: 0 }, errors: ['Plan mode not configured'] };
+    }
+
+    const queuePath = join(agentScopeDir, 'queue.md');
+    const logPath = join(agentScopeDir, 'execution.log');
+
+    if (!existsSync(queuePath)) {
+      return { tasks: [], summary: { total: 0, done: 0, failed: 0, blocked: 0, ready: 0 }, errors: ['queue.md not found'] };
+    }
+
+    const queueParseConfig = readQueueParseConfig(agentScopeDir);
+    const queueResult = parseQueue(readFileSync(queuePath, 'utf-8'), queueParseConfig);
+    if (queueResult.errors.length > 0) {
+      return { tasks: [], summary: { total: 0, done: 0, failed: 0, blocked: 0, ready: 0 }, errors: queueResult.errors };
+    }
+
+    let logResult = parseLog('');
+    if (existsSync(logPath)) {
+      logResult = parseLog(readFileSync(logPath, 'utf-8'));
+    }
+
+    const snapshot = computeSnapshot(queueResult.tasks, logResult.events);
+    return {
+      tasks: snapshot.tasks.map(t => ({
+        id: t.id,
+        area: t.area,
+        slice: t.slice,
+        description: t.description.slice(0, 200),
+        dependsOn: t.dependsOn,
+        status: t.status,
+        lastEvent: t.lastEvent ?? null,
+      })),
+      summary: snapshot.summary,
+      errors: [],
+    };
+  });
+
+  // POST /agent/register — agent self-registration (ai_feedback.md #2)
+  // GET  /agents        — list active agents
+  // POST /agent/heartbeat — keep-alive
+  interface AgentRecord {
+    agentId: string;
+    name: string;
+    sessionId: string | null;
+    taskId: string | null;
+    status: string;
+    registeredAt: string;
+    lastSeen: string;
+  }
+  const agentRegistry = new Map<string, AgentRecord>();
+
+  fastify.post<{ Body: { agentId?: string; sessionId?: string; taskId?: string; name?: string } }>(
+    '/agent/register', async (request, reply) => {
+      const { agentId, sessionId, taskId, name } = request.body ?? {};
+      if (!agentId) return reply.code(400).send({ error: 'agentId is required' });
+
+      const now = new Date().toISOString();
+      const record: AgentRecord = {
+        agentId,
+        name: name ?? agentId,
+        sessionId: sessionId ?? null,
+        taskId: taskId ?? null,
+        status: 'active',
+        registeredAt: agentRegistry.get(agentId)?.registeredAt ?? now,
+        lastSeen: now,
+      };
+      agentRegistry.set(agentId, record);
+      if (emitter) emitter.emit('change', { type: 'agent-update', timestamp: now });
+      return { ok: true, agentId, registeredAt: record.registeredAt };
+    }
+  );
+
+  fastify.post<{ Body: { agentId?: string; status?: string; taskId?: string } }>(
+    '/agent/heartbeat', async (request, reply) => {
+      const { agentId, status, taskId } = request.body ?? {};
+      if (!agentId) return reply.code(400).send({ error: 'agentId is required' });
+
+      const existing = agentRegistry.get(agentId);
+      if (!existing) return reply.code(404).send({ error: 'Agent not registered. Call /agent/register first.' });
+
+      const now = new Date().toISOString();
+      existing.lastSeen = now;
+      if (status) existing.status = status;
+      if (taskId !== undefined) existing.taskId = taskId;
+      if (emitter) emitter.emit('change', { type: 'agent-update', timestamp: now });
+      return { ok: true, agentId, lastSeen: now };
+    }
+  );
+
+  fastify.get('/agents', async () => {
+    const now = Date.now();
+    const agents = Array.from(agentRegistry.values()).map(a => ({
+      ...a,
+      isStale: now - new Date(a.lastSeen).getTime() > 60_000,
+    }));
+    return { agents };
+  });
+
   fastify.get('/claude-insights', async (_request, reply) => {
     const reportPath = join(claudeDir, 'usage-data', 'report.html');
     if (!existsSync(reportPath)) {

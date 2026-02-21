@@ -2,15 +2,38 @@
   "queueFile": "queue.md",
   "logFile": "execution.log",
   "port": 4317,
-  "headings": {
-    "slice": "# Slice {name}",
-    "task": "## {id}"
-  },
-  "fields": [
-    { "name": "Area",        "type": "text",  "required": true },
-    { "name": "Priority",    "type": "enum",  "required": true, "values": ["critical", "high", "medium", "low"] },
-    { "name": "Depends",     "type": "refs",  "required": true },
-    { "name": "Description", "type": "text",  "required": true },
-    { "name": "AC",          "type": "text",  "required": true }
-  ]
+  "taskModel": {
+    "fields": [
+      {
+        "name": "Area",
+        "type": "enum",
+        "required": true,
+        "values": [
+          "Setup",
+          "Core",
+          "Test"
+        ]
+      },
+      {
+        "name": "Depends",
+        "type": "refs",
+        "required": false
+      },
+      {
+        "name": "Description",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "AC",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "id": "{slice}-T{n}",
+    "headings": {
+      "slice": "# Slice {name}",
+      "task": "## {id}"
+    }
+  }
 }

@@ -1,54 +1,36 @@
-# Slice S1 — Activity Stats: Real Usage Data
+# Slice S10 — Agent API (ai_feedback.md eksikler)
 
-## S1-T1
+## S10-T1
 Area: Server
 Priority: critical
 Depends: -
-Description: `/usage` endpoint'ini gerçek verilerle besle. `~/.claude/stats-cache.json` dosyasını oku (varsa). Döndür: totalSessions, totalMessages, modelUsage (inputTokens, outputTokens, cacheReadInputTokens by model), dailyActivity (son 7 gün: date, messageCount, sessionCount, toolCallCount), hourCounts, firstSessionDate, longestSession. Bu veri her zaman mevcut (dosya Claude Code tarafından yazılıyor). Dosya yoksa 404 dön.
-AC: `curl http://localhost:4317/usage` gerçek stats-cache.json verisini döndürüyor. dailyActivity, modelUsage, totalMessages alanları mevcut.
+Description: `POST /log` endpoint ekle. Agent HTTP üzerinden execution.log'a entry yazabilsin. Body: `{ task_id: string, status: "DONE"|"FAILED"|"BLOCKED", agent?: string, reason?: string, meta?: object }`. Endpoint, `.claudedash/execution.log` dosyasına JSONL formatında append eder (timestamp otomatik). agentScopeDir yoksa 404 dön. BLOCKED status gelirse SSE üzerinden `{ type: "blocked", task_id, reason }` event'i push et.
+AC: `curl -X POST http://localhost:4317/log -d '{"task_id":"S1-T1","status":"DONE","agent":"test"}'` → 200 + execution.log'a satır eklendi. BLOCKED gönderince SSE client'lar event alıyor.
 
-## S1-T2
+## S10-T2
 Area: Server
-Priority: high
-Depends: S1-T1
-Description: `GET /activity/sessions` endpoint ekle. `~/.claude/usage-data/session-meta/` klasöründeki tüm JSON dosyalarını oku. Her biri: session_id, project_path, start_time, duration_minutes, user_message_count, tool_counts, languages, git_commits, input_tokens, output_tokens, lines_added içeriyor. Son 20 session'ı start_time'a göre sıralayıp döndür.
-AC: `curl http://localhost:4317/activity/sessions` session listesi döndürüyor. Her session'da proje adı, süre, mesaj sayısı, token bilgisi var.
-
-## S1-T3
-Area: Dashboard
 Priority: critical
-Depends: S1-T1
-Description: Top bar'daki usage widget'ını gerçek veriyle güncelle. Şu an widget hep gizli çünkü `usage.json` yok. Yeni `/usage` endpoint'i (stats-cache.json) gerçek veri döndürdüğünden widget artık görünür olacak. Widget: "14.7K msgs · 37 sessions" formatında bugün değil toplam göstersin. Hover tooltip'te: model breakdown (Sonnet/Opus), dailyActivity son 7 gün özeti, firstSessionDate.
-AC: Top bar'da her zaman kullanım özeti görünüyor. Tooltip'te model bazında token breakdown var.
+Depends: -
+Description: `GET /queue` endpoint ekle. queue.md + execution.log dosyalarını parse et. queue.md'deki her task için: id, area, description (ilk 200 karakter), dependsOn (Depends: satırından). execution.log'dan son status'u al. Her task'ın computed status'unu hesapla: log'da DONE ise DONE, FAILED ise FAILED, BLOCKED ise BLOCKED; dependency'leri DONE değilse BLOCKED; hiçbiri yoksa READY. Döndür: `{ tasks: ComputedTask[], summary: { total, done, failed, blocked, ready } }`.
+AC: `curl http://localhost:4317/queue` → task listesi + summary. Her task'ta status alanı doğru hesaplanmış. Dependency chain çalışıyor.
 
-# Slice S2 — Activity View (Yeni Tab)
-
-## S2-T1
-Area: Dashboard
-Priority: critical
-Depends: S1-T1, S1-T2
-Description: Dashboard'a "Activity" sekmesi ekle (Radio/ClipboardList/GitBranch'in yanına, BarChart2 ikonu). Bu view: (1) Summary cards: Total Sessions, Total Messages, Lines Added, Git Commits — tüm zamanlar. (2) Son 7 günün bar chart'ı: her gün için messageCount çubuğu (CSS ile, kütüphane olmadan). (3) Model kullanım tablosu: model adı, input tokens, output tokens, cache read tokens. (4) Peak hours: 24 saat için hourCounts'tan activity heatmap (inline CSS ile 24 kutucuk).
-AC: Activity sekmesi açılınca veriler yükleniyor. 4 summary card, 7 günlük bar chart, model tablosu ve hour heatmap görünüyor. Tüm veri `/usage` endpoint'inden geliyor.
-
-## S2-T2
-Area: Dashboard
-Priority: high
-Depends: S2-T1, S1-T2
-Description: Activity view'a "Recent Sessions" bölümü ekle. `/activity/sessions` endpoint'inden son 10 session'ı göster. Her satır: proje adı (project_path'ten basename), süre, mesaj sayısı, dil listesi (ilk 3), git commits. Satıra tıklayınca expanded detay: tool_counts breakdown, lines_added, ilk prompt (kırpılmış).
-AC: Son sessionlar tablo/liste halinde görünüyor. Her session satırı tıklanabilir ve detayları açıyor.
-
-# Slice S3 — Live View Session Zenginleştirme
-
-## S3-T1
+## S10-T3
 Area: Server
 Priority: high
 Depends: -
-Description: `/sessions` endpoint'ini session-meta verileriyle zenginleştir. Mevcut session listesini döndürürken, session ID'ye göre `~/.claude/usage-data/session-meta/<id>.json` dosyasını da oku (varsa). Varsa: lines_added, git_commits, languages, duration_minutes, tool_counts alanlarını session objesine ekle. Dosya yoksa bu alanlar undefined kalır.
-AC: `/sessions` response'unda mevcut session'lar için lines_added ve git_commits görünüyor.
+Description: `POST /agent/register` ve `POST /agent/heartbeat` endpoint'leri ekle. Register body: `{ agentId: string, sessionId?: string, taskId?: string, name?: string }`. Heartbeat body: `{ agentId: string, status?: string, taskId?: string }`. Server memory'de aktif agent'ları tut (Map). Son heartbeat'ten 60 saniye geçmişse agent "stale" sayılsın. `GET /agents` endpoint: kayıtlı agent'ların listesini döndür (agentId, name, taskId, status, lastSeen, isStale). SSE'den `{ type: "agent-update" }` push et.
+AC: register + heartbeat → 200. GET /agents → aktif agent listesi. 60s timeout ile stale detection çalışıyor.
 
-## S3-T2
+## S10-T4
 Area: Dashboard
+Priority: high
+Depends: S10-T2, S10-T3
+Description: LiveView sidebar'a "Agent API" durum göstergesi ekle. Sidebar footer'ına küçük bir panel: (1) /queue summary badge'leri: `4 READY · 2 DONE · 1 BLOCKED`. BLOCKED varsa kırmızı vurgulu. (2) Kayıtlı agent'lar: her biri için isim + taskId + son görülme. Stale agent'lar soluk gösterilir. (3) BLOCKED SSE event gelince browser notification tetikle ("Task BLOCKED: <task_id> — <reason>"). Bu mevcut notification sistemini genişletir.
+AC: LiveView sidebar'da queue summary görünüyor. BLOCKED bildirim çalışıyor. Agent listesi var.
+
+## S10-T5
+Area: Server+CLI
 Priority: medium
-Depends: S3-T1
-Description: LiveView session kartlarında session-meta bilgilerini göster. Session kartının altına küçük badge'ler ekle: "↑ 1.2K lines", "2 commits", kullanılan diller (TypeScript, Python gibi). Veri yoksa badge görünmez.
-AC: Session kartlarında lines_added ve git_commits badge'leri görünüyor. Veri yoksa temiz görünüm korunuyor.
+Depends: -
+Description: `npx claudedash init` komutuna `workflow.md` şablonu ekle. Mevcut init komutu .claudedash/queue.md + CLAUDE.md oluşturuyor. Buna ek olarak `.claudedash/workflow.md` oluştur. Şablon: INTAKE (queue'dan task al), EXECUTE (işi yap), LOG (execution.log'a yaz VEYA POST /log endpoint'e), CHECKPOINT (blocker varsa BLOCKED logla ve dur) fazları. Log için tercih sırası: server çalışıyorsa HTTP, değilse dosya. Ayrıca workflow.md'de `POST /log` kullanım örneği göster.
+AC: `npx claudedash init` → .claudedash/workflow.md oluşturuyor. workflow.md'de POST /log kullanım örneği var. CLAUDE.md snippet'ı workflow.md'yi referans ediyor.

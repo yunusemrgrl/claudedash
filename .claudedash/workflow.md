@@ -1,58 +1,63 @@
 # Agent Workflow
 
-Claudedash Plan mode için otonom yürütme protokolü.
-Her görev `.claudedash/queue.md`'den alınır ve aşağıdaki fazlardan geçer.
+Autonomous execution protocol for claudedash Plan mode.
+Each task from `queue.md` is processed through these phases.
 
 ---
 
-## Faz 1 — INTAKE
+## Phase 1 — INTAKE
 
-`.claudedash/queue.md`'den sonraki READY görevi oku.
+Read the next READY task from `.claudedash/queue.md`.
 
-1. Görevi parse et: ID, Area, Priority, Description, AC, Depends.
-2. Depends listesindeki tüm görevlerin DONE olduğunu doğrula.
-3. Görevi `in_progress` olarak TodoWrite ile işaretle.
-
-Başlamadan önce: Description ve AC'yi tam oku. Eksik bağlam varsa BLOCKED yaz.
+1. Parse the task: ID, Area, Description, AC, Dependencies.
+2. Verify all dependencies have status DONE in `execution.log`.
+3. If dependencies are not met, log BLOCKED and move to next task.
 
 ---
 
-## Faz 2 — EXECUTE
+## Phase 2 — EXECUTE
 
-Görevi uygula.
+Implement the task.
 
-1. AC'yi hedef al — description "nasıl", AC "ne zaman bitmiş sayılır"ı tanımlar.
-2. Yalnızca kapsam dahili dosyaları değiştir.
-3. 2 başarısız denemeden sonra dur, FAILED logla.
-4. Her değişiklikten sonra testleri çalıştır: `npm test` (core için) veya `npm run build` (server/dashboard için).
+1. Read the task description and acceptance criteria.
+2. Identify affected files using the codebase.
+3. Implement the change. Follow existing conventions.
+4. Run relevant tests/linters to verify.
 
 ---
 
-## Faz 3 — LOG
+## Phase 3 — LOG
 
-Sonucu `.claudedash/execution.log`'a ekle (bir JSON satırı):
+Append result to `.claudedash/execution.log` (one JSON line):
 
-Başarı:
+Success:
 ```json
-{"task_id":"S1-T1","status":"DONE","timestamp":"<ISO>","agent":"claude"}
+{"task_id":"S1-T1","status":"DONE","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 ```
 
-Başarısız:
+Failure:
 ```json
-{"task_id":"S1-T1","status":"FAILED","timestamp":"<ISO>","agent":"claude","meta":{"reason":"<açıklama>"}}
+{"task_id":"S1-T1","status":"FAILED","timestamp":"2026-01-15T10:30:00Z","agent":"claude","meta":{"reason":"tests failing"}}
 ```
 
-Engel:
+Blocked:
 ```json
-{"task_id":"S1-T1","status":"BLOCKED","timestamp":"<ISO>","agent":"claude","reason":"<ne eksik>"}
+{"task_id":"S1-T1","status":"BLOCKED","reason":"missing API key","timestamp":"2026-01-15T10:30:00Z","agent":"claude"}
 ```
 
 ---
 
-## Kurallar
+## Phase 4 — NEXT
 
-1. Kalite kapısı: her görev sonrası `npm test` geçmeli.
-2. Kapsam genişletme yasak — görev dışı iyileştirme yapma.
-3. Faz 3'ü atlama — her görev loglanmalı.
-4. queue.md salt okunur — asla değiştirme.
-5. Timestamp için `new Date().toISOString()` kullan.
+Pick the next READY task and return to Phase 1.
+If no READY tasks remain, stop and report summary.
+
+---
+
+## Rules
+
+1. One task at a time. Finish before starting next.
+2. Always log to execution.log — never skip Phase 3.
+3. If stuck after 2 attempts, log FAILED and move on.
+4. Do not modify queue.md — it is read-only for the agent.
+5. Use `new Date().toISOString()` for timestamps.
