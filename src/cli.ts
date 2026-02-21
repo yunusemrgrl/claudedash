@@ -804,8 +804,42 @@ program
     const hasTodoWrite = claudeMdExists && readFileSync(claudeMdPath, 'utf-8').includes('TodoWrite');
     checks.push({ label: 'CLAUDE.md with TodoWrite directive', ok: hasTodoWrite, note: !claudeMdExists ? 'Not found — run claudedash init' : !hasTodoWrite ? 'TodoWrite missing — run claudedash init' : undefined });
 
-    // Port 4317 availability (simple check)
-    checks.push({ label: 'Default port 4317', ok: true, note: 'Cannot test without binding' });
+    // queue.md (if plan mode)
+    if (existsSync(claudeWatchDir)) {
+      const queuePath = join(claudeWatchDir, 'queue.md');
+      const logPath = join(claudeWatchDir, 'execution.log');
+      checks.push({ label: 'queue.md', ok: existsSync(queuePath), note: existsSync(queuePath) ? undefined : 'Not found — run claudedash init' });
+      checks.push({ label: 'execution.log', ok: existsSync(logPath), note: existsSync(logPath) ? undefined : 'Not found — run claudedash init' });
+    }
+
+    // Hooks installed
+    const settingsPath = join(claudeDir, 'settings.json');
+    if (existsSync(settingsPath)) {
+      try {
+        const settingsRaw = readFileSync(settingsPath, 'utf8');
+        const settings = JSON.parse(settingsRaw) as Record<string, unknown>;
+        const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
+        const hasHook = (key: string) => (hooks[key] ?? []).some((h: unknown) =>
+          typeof h === 'object' && (JSON.stringify(h).includes('claudedash') || JSON.stringify(h).includes('/hook'))
+        );
+        const postToolUse = hasHook('PostToolUse');
+        const stopHook = hasHook('Stop');
+        checks.push({ label: 'Hook: PostToolUse', ok: postToolUse, note: !postToolUse ? 'Run: claudedash hooks install' : undefined });
+        checks.push({ label: 'Hook: Stop', ok: stopHook, note: !stopHook ? 'Run: claudedash hooks install' : undefined });
+      } catch { /* skip */ }
+    }
+
+    // Server running on default port
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1000);
+      const res = await fetch('http://localhost:4317/health', { signal: controller.signal });
+      clearTimeout(timeout);
+      const serverOk = res.ok;
+      checks.push({ label: 'Server on port 4317', ok: serverOk, note: serverOk ? undefined : 'Not running — start with: claudedash start' });
+    } catch {
+      checks.push({ label: 'Server on port 4317', ok: false, note: 'Not running — start with: claudedash start' });
+    }
 
     // Print results
     console.log('\n🩺 claudedash doctor\n');
