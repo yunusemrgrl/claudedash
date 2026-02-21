@@ -180,6 +180,8 @@ export interface WorktreeState {
   dirty: boolean;         // Has uncommitted changes
   aheadCount: number;     // Commits ahead of upstream
   behindCount: number;    // Commits behind upstream
+  isClaudeManaged: boolean;  // True if inside .claude/worktrees/
+  worktreeName?: string;     // Extracted name (basename) for Claude-managed worktrees
   associatedTasks?: Array<{
     sessionId: string;
     taskId: string;

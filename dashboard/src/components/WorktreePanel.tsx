@@ -9,6 +9,7 @@ import {
   CheckCircle,
   RefreshCw,
   GitCommit,
+  Bot,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TypingPrompt } from "@/components/TypingPrompt";
@@ -45,9 +46,22 @@ function WorktreeCard({
       <div className="flex items-center gap-2 mb-1">
         <GitBranch className="size-3.5 text-chart-4 shrink-0" />
         <span className="text-sm font-semibold text-foreground truncate font-mono">
-          {wt.branch}
+          {wt.worktreeName ?? wt.branch}
         </span>
+        {wt.isClaudeManaged && (
+          <span className="flex items-center gap-0.5 text-[10px] text-chart-4 bg-chart-4/10 px-1.5 py-0.5 rounded border border-chart-4/20 shrink-0 ml-auto">
+            <Bot className="size-2.5" />
+            claude
+          </span>
+        )}
       </div>
+
+      {/* Branch (secondary when worktreeName is shown) */}
+      {wt.worktreeName && (
+        <div className="text-[11px] text-muted-foreground/50 font-mono truncate mb-0.5">
+          {wt.branch}
+        </div>
+      )}
 
       {/* Path */}
       <div className="text-[11px] text-muted-foreground/60 font-mono truncate mb-2">
@@ -105,8 +119,19 @@ function WorktreeDetail({ wt }: { wt: WorktreeState }) {
       <div className="px-5 py-4 border-b border-border bg-sidebar/40 shrink-0">
         <div className="flex items-center gap-2 mb-1">
           <GitBranch className="size-4 text-chart-4" />
-          <span className="text-base font-semibold text-foreground font-mono">{wt.branch}</span>
+          <span className="text-base font-semibold text-foreground font-mono">
+            {wt.worktreeName ?? wt.branch}
+          </span>
+          {wt.isClaudeManaged && (
+            <span className="flex items-center gap-1 text-[11px] text-chart-4 bg-chart-4/10 px-2 py-0.5 rounded-full border border-chart-4/20">
+              <Bot className="size-3" />
+              Claude-managed
+            </span>
+          )}
         </div>
+        {wt.worktreeName && (
+          <div className="text-xs text-muted-foreground/50 font-mono mb-0.5">{wt.branch}</div>
+        )}
         <div className="text-xs text-muted-foreground/60 font-mono">{wt.path}</div>
 
         {/* Status row */}
@@ -269,9 +294,9 @@ export function WorktreePanel() {
           <TypingPrompt
             lines={[
               "No git worktrees detected",
-              "git worktree add ../my-project-feat feature/xyz",
-              "Run agents in parallel across branches",
-              "Each worktree gets its own task list here",
+              "claude --worktree <name>",
+              "Creates .claude/worktrees/<name>/ automatically",
+              "Run parallel agents in isolated worktrees",
             ]}
           />
         </div>

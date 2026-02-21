@@ -161,3 +161,19 @@ Priority: medium
 Depends: -
 Description: a11y + hydration uyarılarını gider. (1) page.tsx:311 ve 315: modal overlay div'lerinde onClick var ama keyboard handler yok — onKeyDown ekle veya div'i button'a çevir. (2) page.tsx:114: useEffect(setState,[]) mount flash — mounted state'e suppressHydrationWarning ekle ya da pattern'ı düzelt.
 AC: jsx-a11y uyarıları 0. Hydration flicker uyarısı 0. react-doctor skoru ≥95.
+
+# Slice S16 — Claude Worktree Native Support
+
+## S16-T1
+Area: Server
+Priority: high
+Depends: -
+Description: WorktreeState tipine `isClaudeManaged: boolean` ve `worktreeName?: string` alanları ekle. worktreeDetector.ts'te enrichWorktreeStatus'dan sonra (veya parsePorcelain'de) şunu kontrol et: path `.claude/worktrees/` içeriyorsa isClaudeManaged=true, worktreeName=basename(path) olarak set et. GET /worktrees yanıtında bu alanlar dönsün.
+AC: `.claude/worktrees/feat-auth` path'li bir worktree için GET /worktrees → `{ isClaudeManaged: true, worktreeName: "feat-auth" }`. Normal worktree → `{ isClaudeManaged: false }`.
+
+## S16-T2
+Area: Dashboard
+Priority: high
+Depends: S16-T1
+Description: WorktreePanel.tsx'i yeni alanlara göre güncelle. (1) WorktreeCard'da isClaudeManaged=true ise küçük "claude" badge'i göster (mavi/chart-4 rengi). (2) worktreeName varsa branch adının yanında daha büyük göster, path'i ikincil yap. (3) Boş durum TypingPrompt'unu güncelle: "git worktree add" yerine "claude --worktree <name>" komutunu göster, ".claude/worktrees/<name>/ altında oluşturulur" açıklaması ekle. (4) WorktreeDetail'de isClaudeManaged için "Claude-managed" etiketi göster.
+AC: Claude-managed worktree'de badge görünüyor. Boş durumda "claude --worktree <name>" komutu yazıyor. Build ve lint temiz.

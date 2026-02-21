@@ -440,6 +440,8 @@ export interface WorktreeState {
   dirty: boolean;
   aheadCount: number;
   behindCount: number;
+  isClaudeManaged: boolean;
+  worktreeName?: string;
   associatedTasks?: WorktreeAssociatedTask[];
 }
 

@@ -1,8 +1,14 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { basename } from 'path';
 import type { WorktreeState } from './types.js';
 
 const execFileAsync = promisify(execFile);
+
+/** Returns true if the given absolute path lives inside a .claude/worktrees/ directory. */
+function isClaudeManagedPath(path: string): boolean {
+  return path.includes('/.claude/worktrees/');
+}
 
 /**
  * Parses `git worktree list --porcelain` output into WorktreeState objects.
@@ -38,6 +44,7 @@ export function parsePorcelainOutput(output: string): WorktreeState[] {
 
     if (!path) continue;
 
+    const managed = isClaudeManagedPath(path);
     worktrees.push({
       path,
       head,
@@ -45,6 +52,8 @@ export function parsePorcelainOutput(output: string): WorktreeState[] {
       dirty: false,
       aheadCount: 0,
       behindCount: 0,
+      isClaudeManaged: managed,
+      worktreeName: managed ? basename(path) : undefined,
     });
   }
 
