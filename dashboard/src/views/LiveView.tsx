@@ -71,16 +71,18 @@ export function LiveView({
 
   // Poll agent API + history data every 15 seconds
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
     function fetchAgentData() {
-      void fetch("/queue")
+      void fetch("/queue", { signal })
         .then((r) => r.ok ? r.json() : null)
         .then((d) => { if (d && !d.errors?.length) setQueueSummary(d.summary as QueueSummary); })
         .catch(() => {});
-      void fetch("/agents")
+      void fetch("/agents", { signal })
         .then((r) => r.ok ? r.json() : null)
         .then((d) => { if (d?.agents) setAgents(d.agents as AgentRecord[]); })
         .catch(() => {});
-      void fetch("/hook/events")
+      void fetch("/hook/events", { signal })
         .then((r) => r.ok ? r.json() : null)
         .then((d: { events?: Array<{ event: string; receivedAt: string }> } | null) => {
           if (!d?.events) return;
@@ -88,11 +90,11 @@ export function LiveView({
           if (compact) setLastCompaction({ at: compact.receivedAt, phase: compact.event === 'PreCompact' ? 'pre' : 'post' });
         })
         .catch(() => {});
-      void fetch("/billing-block")
+      void fetch("/billing-block", { signal })
         .then((r) => r.ok ? r.json() : null)
         .then((d) => { if (d) setBillingBlock(d as BillingBlock); })
         .catch(() => {});
-      void fetch("/history")
+      void fetch("/history", { signal })
         .then((r) => r.ok ? r.json() : null)
         .then((d: { prompts?: HistoryPrompt[] } | null) => {
           if (!d?.prompts) return;
@@ -118,7 +120,7 @@ export function LiveView({
     }
     fetchAgentData();
     const iv = setInterval(fetchAgentData, 15_000);
-    return () => clearInterval(iv);
+    return () => { clearInterval(iv); controller.abort(); };
   }, []);
 
   const CLAUDE_MD_SNIPPET = `You MUST use the TodoWrite tool to track your work.\nAt the START of any multi-step task, create a todo list with all steps.\nMark each task in_progress before starting, completed after finishing.`;

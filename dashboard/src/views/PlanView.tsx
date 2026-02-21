@@ -424,10 +424,12 @@ export function PlanView({
       setQualityEvents([]);
       return;
     }
-    fetch(`/quality-timeline?taskId=${encodeURIComponent(selectedTask.id)}`)
+    const controller = new AbortController();
+    fetch(`/quality-timeline?taskId=${encodeURIComponent(selectedTask.id)}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : { events: [] }))
       .then((d) => setQualityEvents(d.events ?? []))
       .catch(() => setQualityEvents([]));
+    return () => controller.abort();
   }, [selectedTask?.id]);
 
   const toggleSlice = (sliceId: string) => {

@@ -115,14 +115,17 @@ export default function Dashboard() {
 
   // Fetch usage stats for top bar widget
   useEffect(() => {
-    fetch("/usage")
+    const controller = new AbortController();
+    fetch("/usage", { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: UsageStats | null) => { if (d) setUsageStats(d); })
       .catch(() => { /* no data — widget stays hidden */ });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetch("/health")
+    const controller = new AbortController();
+    fetch("/health", { signal: controller.signal })
       .then((r) => r.json())
       .then((data: HealthResponse) => {
         setAvailableModes(data.modes);
@@ -135,6 +138,7 @@ export default function Dashboard() {
         setError("Failed to connect to server");
         setLoading(false);
       });
+    return () => controller.abort();
   }, []);
 
   const handleInsightsToggle = () => {
