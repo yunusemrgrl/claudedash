@@ -12,11 +12,9 @@ import { useSessions } from "@/hooks/useSessions";
 export function LiveView({
   searchQuery,
   sidebarCollapsed,
-  mounted,
 }: {
   searchQuery: string;
   sidebarCollapsed: boolean;
-  mounted: boolean;
 }) {
   const [showAllSessions, setShowAllSessions] = useState(false);
   const { sessions, selectedSession, setSelectedSession, sessionCounts } = useSessions(showAllSessions);
@@ -288,7 +286,7 @@ export function LiveView({
       {/* Session Sidebar */}
       <div
         className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
-          mounted ? "transition-all duration-300" : ""
+          "transition-all duration-300"
         } ${sidebarCollapsed ? "w-0 border-r-0" : "w-[220px]"}`}
       >
         <div className="p-3 border-b border-sidebar-border flex items-center justify-between gap-2">

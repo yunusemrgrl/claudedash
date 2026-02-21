@@ -336,11 +336,9 @@ function TaskDetailPanel({
 export function PlanView({
   searchQuery,
   sidebarCollapsed,
-  mounted,
 }: {
   searchQuery: string;
   sidebarCollapsed: boolean;
-  mounted: boolean;
 }) {
   const { data, refresh } = usePlanSnapshot();
   const [selectedTask, setSelectedTask] = useState<ComputedTask | null>(null);
@@ -485,7 +483,7 @@ export function PlanView({
       {/* ── Left Sidebar ────────────────────────────────────────────────── */}
       <div
         className={`bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden ${
-          mounted ? "transition-all duration-300" : ""
+          "transition-all duration-300"
         } ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-72 min-w-[280px]"}`}
       >
         {/* Sidebar header + mini stats + view toggle */}

@@ -96,7 +96,6 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -110,8 +109,6 @@ export default function Dashboard() {
     setShowCheatsheet,
     showCheatsheet,
   });
-
-  useEffect(() => { setMounted(true); }, []);
 
   // Fetch usage stats for top bar widget
   useEffect(() => {
@@ -313,12 +310,18 @@ export default function Dashboard() {
       {/* Keyboard shortcut cheatsheet modal */}
       {showCheatsheet && (
         <div
+          role="presentation"
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center"
           onClick={() => setShowCheatsheet(false)}
+          onKeyDown={(e) => { if (e.key === "Escape") setShowCheatsheet(false); }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard Shortcuts"
             className="bg-background border border-border rounded-xl shadow-xl p-6 w-80 max-w-full"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -357,9 +360,9 @@ export default function Dashboard() {
       {/* Content */}
       <div className="flex-1 flex overflow-hidden">
         {mode === "live" ? (
-          <LiveView searchQuery={searchQuery} sidebarCollapsed={sidebarCollapsed} mounted={mounted} />
+          <LiveView searchQuery={searchQuery} sidebarCollapsed={sidebarCollapsed} />
         ) : mode === "plan" ? (
-          <PlanView searchQuery={searchQuery} sidebarCollapsed={sidebarCollapsed} mounted={mounted} />
+          <PlanView searchQuery={searchQuery} sidebarCollapsed={sidebarCollapsed} />
         ) : mode === "worktrees" ? (
           <WorktreePanel />
         ) : mode === "activity" ? (
