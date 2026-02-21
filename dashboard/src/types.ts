@@ -247,10 +247,14 @@ export interface ActivitySession {
   inputTokens: number;
   outputTokens: number;
   linesAdded: number;
+  linesRemoved: number;
+  filesModified: number;
   firstPrompt: string | null;
   toolErrors: number;
   usesMcp: boolean;
   usesWebSearch: boolean;
+  usesTaskAgent: boolean;
+  userInterruptions: number;
 }
 
 export interface ActivitySessionsResponse {
@@ -328,6 +332,60 @@ export interface CostResponse {
   totalCostUSD: number;
   perModel: ModelCostEntry[];
   disclaimer: string;
+}
+
+// History types (from ~/.claude/history.jsonl)
+export interface HistoryPrompt {
+  display: string;
+  timestamp: string;
+  project: string;
+  projectName: string | null;
+  sessionId: string;
+}
+
+export interface HistoryResponse {
+  prompts: HistoryPrompt[];
+  topProjects: { path: string; name: string; count: number }[];
+  total: number;
+}
+
+// Plans types (from ~/.claude/plans/*.md)
+export interface Plan {
+  id: string;
+  filename: string;
+  title: string;
+  createdAt: string;
+  content: string;
+}
+
+export interface PlansResponse {
+  plans: Plan[];
+}
+
+// Billing block types (5-hour rolling window)
+export interface BillingBlock {
+  active: boolean;
+  blockStart?: string;
+  blockEnd?: string;
+  minutesElapsed?: number;
+  minutesRemaining?: number;
+  tokensUsed?: number;
+  breakdown?: { input: number; output: number; cacheCreate: number; cacheRead: number };
+  estimatedCostUSD?: number;
+}
+
+// Hook event types
+export interface HookEvent {
+  type: 'hook';
+  event: string;
+  tool?: string;
+  session?: string;
+  cwd?: string;
+  receivedAt: string;
+}
+
+export interface HookEventsResponse {
+  events: HookEvent[];
 }
 
 // Worktree types

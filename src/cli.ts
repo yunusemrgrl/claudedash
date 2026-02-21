@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('claudedash')
   .description('Live Kanban, quality gates and context health monitoring for Claude Code agents')
-  .version('0.8.0');
+  .version('0.9.0');
 
 program
   .command('init')
@@ -774,6 +774,92 @@ program
     }
     const failed = checks.filter(c => !c.ok).length;
     console.log(`\n${failed === 0 ? '\x1b[32mAll checks passed.\x1b[0m' : `\x1b[31m${failed} check(s) failed.\x1b[0m`}\n`);
+  });
+
+// ── hooks command ─────────────────────────────────────────────────────────────
+program
+  .command('hooks <action>')
+  .description('Manage Claude Code hooks integration (actions: install, status, uninstall)')
+  .option('--port <port>', 'claudedash server port', '4317')
+  .action((action: string, opts: { port: string }) => {
+    const port = opts.port;
+    const settingsPath = join(process.env.HOME ?? '~', '.claude', 'settings.json');
+
+    if (action === 'status') {
+      if (!existsSync(settingsPath)) {
+        console.log('\x1b[33mNo ~/.claude/settings.json found.\x1b[0m');
+        return;
+      }
+      const raw = readFileSync(settingsPath, 'utf8');
+      const settings = JSON.parse(raw) as Record<string, unknown>;
+      const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
+      const hasPostTool = (hooks.PostToolUse ?? []).some((h: unknown) =>
+        typeof h === 'object' && JSON.stringify(h).includes('claudedash') || JSON.stringify(h).includes(`${port}/hook`)
+      );
+      const hasStop = (hooks.Stop ?? []).some((h: unknown) =>
+        typeof h === 'object' && (JSON.stringify(h).includes('claudedash') || JSON.stringify(h).includes(`${port}/hook`))
+      );
+      console.log(`\nclaudedash hooks status (port ${port}):\n`);
+      console.log(`  PostToolUse: ${hasPostTool ? '\x1b[32m✓ installed\x1b[0m' : '\x1b[31m✗ not installed\x1b[0m'}`);
+      console.log(`  Stop:        ${hasStop ? '\x1b[32m✓ installed\x1b[0m' : '\x1b[31m✗ not installed\x1b[0m'}`);
+      if (!hasPostTool || !hasStop) {
+        console.log(`\nRun \x1b[36mnpx claudedash hooks install\x1b[0m to enable real-time tool event streaming.\n`);
+      }
+      return;
+    }
+
+    if (action === 'install') {
+      let settings: Record<string, unknown> = {};
+      if (existsSync(settingsPath)) {
+        try { settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>; }
+        catch { console.error('Failed to parse settings.json'); process.exit(1); }
+      }
+
+      const hookCmd = (event: string) =>
+        `curl -sf -X POST http://localhost:${port}/hook -H 'Content-Type: application/json' -d '{"event":"${event}","tool":"$CLAUDE_TOOL_NAME","session":"$CLAUDE_SESSION_ID","cwd":"$CLAUDE_CWD"}' || true`;
+
+      const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
+
+      // PostToolUse hook
+      const postToolEntry = { matcher: '', hooks: [{ type: 'command', command: hookCmd('PostToolUse') }] };
+      if (!Array.isArray(hooks.PostToolUse)) hooks.PostToolUse = [];
+      const alreadyPost = hooks.PostToolUse.some((h: unknown) => JSON.stringify(h).includes(`${port}/hook`));
+      if (!alreadyPost) hooks.PostToolUse.push(postToolEntry);
+
+      // Stop hook
+      const stopEntry = { matcher: '', hooks: [{ type: 'command', command: hookCmd('Stop') }] };
+      if (!Array.isArray(hooks.Stop)) hooks.Stop = [];
+      const alreadyStop = hooks.Stop.some((h: unknown) => JSON.stringify(h).includes(`${port}/hook`));
+      if (!alreadyStop) hooks.Stop.push(stopEntry);
+
+      settings.hooks = hooks;
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+      console.log(`\n\x1b[32m✓ claudedash hooks installed\x1b[0m in ~/.claude/settings.json`);
+      console.log(`  PostToolUse → POST http://localhost:${port}/hook`);
+      console.log(`  Stop        → POST http://localhost:${port}/hook`);
+      console.log(`\nStart claudedash and run a Claude Code session to see real-time tool events.\n`);
+      return;
+    }
+
+    if (action === 'uninstall') {
+      if (!existsSync(settingsPath)) { console.log('No settings.json found.'); return; }
+      let settings: Record<string, unknown> = {};
+      try { settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as Record<string, unknown>; }
+      catch { console.error('Failed to parse settings.json'); process.exit(1); }
+      const hooks = (settings.hooks ?? {}) as Record<string, unknown[]>;
+      const filterHook = (arr: unknown[]) => arr.filter((h: unknown) =>
+        !(typeof h === 'object' && JSON.stringify(h).includes(`${port}/hook`))
+      );
+      if (Array.isArray(hooks.PostToolUse)) hooks.PostToolUse = filterHook(hooks.PostToolUse);
+      if (Array.isArray(hooks.Stop)) hooks.Stop = filterHook(hooks.Stop);
+      settings.hooks = hooks;
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+      console.log(`\n\x1b[32m✓ claudedash hooks removed\x1b[0m from ~/.claude/settings.json\n`);
+      return;
+    }
+
+    console.error(`Unknown action: ${action}. Use install, status, or uninstall.`);
+    process.exit(1);
   });
 
 program.parse();

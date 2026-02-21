@@ -73,10 +73,14 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
             inputTokens: meta.input_tokens ?? 0,
             outputTokens: meta.output_tokens ?? 0,
             linesAdded: meta.lines_added ?? 0,
+            linesRemoved: meta.lines_removed ?? 0,
+            filesModified: meta.files_modified ?? 0,
             firstPrompt: meta.first_prompt ?? null,
             toolErrors: meta.tool_errors ?? 0,
             usesMcp: meta.uses_mcp ?? false,
             usesWebSearch: meta.uses_web_search ?? false,
+            usesTaskAgent: meta.uses_task_agent ?? false,
+            userInterruptions: meta.user_interruptions ?? 0,
           });
         } catch {
           // skip malformed files
@@ -91,6 +95,63 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       return { sessions: sessions.slice(0, 20), total: sessions.length };
     } catch {
       return reply.code(500).send({ error: 'Failed to read session metadata' });
+    }
+  });
+
+  // GET /history — reads ~/.claude/history.jsonl (full cross-project prompt history)
+  fastify.get('/history', async (_req, reply) => {
+    const historyPath = join(claudeDir, 'history.jsonl');
+    if (!existsSync(historyPath)) {
+      return { prompts: [], topProjects: [] };
+    }
+    try {
+      const raw = readFileSync(historyPath, 'utf8');
+      const lines = raw.split('\n').filter(l => l.trim());
+
+      interface HistoryEntry {
+        display: string;
+        timestamp: number;
+        project: string;
+        sessionId: string;
+      }
+
+      const allEntries: HistoryEntry[] = [];
+      const projectCounts: Record<string, number> = {};
+
+      for (const line of lines) {
+        try {
+          const entry = JSON.parse(line) as Record<string, unknown>;
+          const display = typeof entry.display === 'string' ? entry.display : '';
+          const project = typeof entry.project === 'string' ? entry.project : '';
+          const sessionId = typeof entry.sessionId === 'string' ? entry.sessionId : '';
+          const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : 0;
+
+          allEntries.push({ display: display.slice(0, 200), timestamp, project, sessionId });
+          if (project) {
+            projectCounts[project] = (projectCounts[project] ?? 0) + 1;
+          }
+        } catch { /* skip bad lines */ }
+      }
+
+      // Sort by timestamp desc, return last 50
+      allEntries.sort((a, b) => b.timestamp - a.timestamp);
+      const prompts = allEntries.slice(0, 50).map(e => ({
+        display: e.display,
+        timestamp: new Date(e.timestamp).toISOString(),
+        project: e.project,
+        projectName: e.project ? basename(e.project) : null,
+        sessionId: e.sessionId,
+      }));
+
+      // Top 10 projects by frequency
+      const topProjects = Object.entries(projectCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([path, count]) => ({ path, name: basename(path), count }));
+
+      return { prompts, topProjects, total: allEntries.length };
+    } catch {
+      return reply.code(500).send({ error: 'Failed to read history.jsonl' });
     }
   });
 
@@ -384,6 +445,111 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       };
     } catch {
       return reply.code(500).send({ error: 'Failed to compute cost' });
+    }
+  });
+
+  // GET /plans — reads ~/.claude/plans/*.md (Claude-generated plan documents)
+  fastify.get('/plans', async () => {
+    const plansDir = join(claudeDir, 'plans');
+    if (!existsSync(plansDir)) return { plans: [] };
+    try {
+      const files = readdirSync(plansDir).filter(f => f.endsWith('.md'));
+      const plans = files.map(file => {
+        const filePath = join(plansDir, file);
+        try {
+          const content = readFileSync(filePath, 'utf8');
+          const mtime = statSync(filePath).mtime.toISOString();
+          // Extract title from first `# ` heading
+          const titleMatch = content.match(/^#\s+(.+)$/m);
+          const title = titleMatch ? titleMatch[1].trim() : file.replace('.md', '');
+          const id = file.replace('.md', '');
+          return { id, filename: file, title, createdAt: mtime, content };
+        } catch { return null; }
+      }).filter(Boolean);
+      // Sort by mtime desc
+      plans.sort((a, b) => {
+        if (!a || !b) return 0;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      return { plans };
+    } catch {
+      return { plans: [] };
+    }
+  });
+
+  // GET /billing-block — computes current 5-hour billing window token usage from JSONL
+  fastify.get('/billing-block', async () => {
+    const projectsDir = join(claudeDir, 'projects');
+    if (!existsSync(projectsDir)) return { active: false };
+    try {
+      const windowMs = 5 * 60 * 60 * 1000; // 5 hours
+      const now = Date.now();
+      const windowStart = now - windowMs;
+
+      let totalInput = 0, totalOutput = 0, totalCacheCreate = 0, totalCacheRead = 0;
+      let oldestTimestamp: number | null = null;
+
+      const projectDirs = readdirSync(projectsDir);
+      for (const pd of projectDirs) {
+        const pdPath = join(projectsDir, pd);
+        let entries: string[];
+        try { entries = readdirSync(pdPath).filter(f => f.endsWith('.jsonl')); }
+        catch { continue; }
+
+        for (const entry of entries) {
+          try {
+            const raw = readFileSync(join(pdPath, entry), 'utf8');
+            const lines = raw.split('\n').filter(l => l.trim());
+            for (const line of lines) {
+              try {
+                const msg = JSON.parse(line) as Record<string, unknown>;
+                if (msg.type !== 'assistant') continue;
+                const ts = typeof msg.timestamp === 'string' ? new Date(msg.timestamp).getTime() : 0;
+                if (!ts || ts < windowStart) continue;
+
+                const message = msg.message as Record<string, unknown> | undefined;
+                const usage = message?.usage as Record<string, number> | undefined;
+                if (!usage) continue;
+
+                totalInput += usage.inputTokens ?? 0;
+                totalOutput += usage.outputTokens ?? 0;
+                totalCacheCreate += usage.cacheCreationInputTokens ?? 0;
+                totalCacheRead += usage.cacheReadInputTokens ?? 0;
+                if (!oldestTimestamp || ts < oldestTimestamp) oldestTimestamp = ts;
+              } catch { /* skip */ }
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      const tokensUsed = totalInput + totalOutput + totalCacheCreate + totalCacheRead;
+      if (tokensUsed === 0) return { active: false };
+
+      const blockStart = oldestTimestamp ?? now;
+      const minutesElapsed = Math.round((now - blockStart) / 60000);
+      const minutesRemaining = Math.max(0, 300 - minutesElapsed);
+
+      // Estimate cost using same pricing as /cost
+      const SONNET_IN = 3, SONNET_OUT = 15; // per MTok (assume sonnet as baseline)
+      const estimatedCostUSD = Math.round((
+        (totalInput / 1_000_000) * SONNET_IN +
+        (totalOutput / 1_000_000) * SONNET_OUT +
+        (totalCacheRead / 1_000_000) * (SONNET_IN * 0.1) +
+        (totalCacheCreate / 1_000_000) * (SONNET_IN * 0.25)
+      ) * 100) / 100;
+
+      return {
+        active: true,
+        blockStart: new Date(blockStart).toISOString(),
+        blockEnd: new Date(blockStart + windowMs).toISOString(),
+        minutesElapsed,
+        minutesRemaining,
+        tokensUsed,
+        breakdown: { input: totalInput, output: totalOutput, cacheCreate: totalCacheCreate, cacheRead: totalCacheRead },
+        estimatedCostUSD,
+      };
+    } catch {
+      return { active: false };
     }
   });
 

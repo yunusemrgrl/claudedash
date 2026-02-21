@@ -12,10 +12,23 @@ export interface LiveRouteOptions {
   emitter: EventEmitter;
 }
 
+export interface HookEvent {
+  type: 'hook';
+  event: string;
+  tool?: string;
+  session?: string;
+  cwd?: string;
+  receivedAt: string;
+  [key: string]: unknown;
+}
+
 export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOptions): Promise<void> {
   const { claudeDir, agentScopeDir, emitter } = opts;
-  const sseClients = new Set<(event: WatchEvent) => void>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sseClients = new Set<(event: any) => void>();
   let lastSessions: string | null = null;
+  // Ring buffer of last 100 hook events
+  const hookEvents: HookEvent[] = [];
 
   emitter.on('change', (event: WatchEvent) => {
     if (event.type === 'sessions') lastSessions = new Date().toISOString();
@@ -99,5 +112,28 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
     const found = sessions.find(s => s.id === id);
     if (!found) return reply.code(404).send({ error: 'Session not found' });
     return { command: `claude resume ${id}`, sessionId: id };
+  });
+
+  // POST /hook — receives Claude Code hook events, fans out via SSE, stores in ring buffer
+  fastify.post<{ Body: Record<string, unknown> }>('/hook', async (request) => {
+    const body = request.body ?? {};
+    const hookEvent: HookEvent = {
+      type: 'hook',
+      event: typeof body.event === 'string' ? body.event : 'unknown',
+      tool: typeof body.tool === 'string' ? body.tool : undefined,
+      session: typeof body.session === 'string' ? body.session : undefined,
+      cwd: typeof body.cwd === 'string' ? body.cwd : undefined,
+      receivedAt: new Date().toISOString(),
+      ...body,
+    };
+    hookEvents.push(hookEvent);
+    if (hookEvents.length > 100) hookEvents.shift();
+    for (const send of sseClients) send(hookEvent);
+    return { ok: true, receivedAt: hookEvent.receivedAt };
+  });
+
+  // GET /hook/events — returns the ring buffer of recent hook events
+  fastify.get('/hook/events', async () => {
+    return { events: hookEvents.slice().reverse() };
   });
 }

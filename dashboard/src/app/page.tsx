@@ -11,6 +11,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   BarChart2,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import type { HealthResponse, UsageStats } from "@/types";
@@ -19,10 +20,11 @@ import { LiveView } from "@/views/LiveView";
 import { PlanView } from "@/views/PlanView";
 import { InsightsView } from "@/views/InsightsView";
 import { ActivityView } from "@/views/ActivityView";
+import { PlansLibraryView } from "@/views/PlansLibraryView";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Tooltip } from "@/components/ui/tooltip";
 
-type ViewMode = "live" | "plan" | "worktrees" | "activity" | "insights";
+type ViewMode = "live" | "plan" | "worktrees" | "activity" | "insights" | "plans";
 
 const NAV_TABS: {
   id: Exclude<ViewMode, "insights">;
@@ -57,6 +59,13 @@ const NAV_TABS: {
     icon: BarChart2,
     label: "Activity",
     tooltip: "Usage stats, session history and token breakdown",
+    show: () => true,
+  },
+  {
+    id: "plans",
+    icon: FileText,
+    label: "Plans",
+    tooltip: "Claude Code plan documents from ~/.claude/plans/",
     show: () => true,
   },
 ];
@@ -111,6 +120,7 @@ export default function Dashboard() {
         : "insights"
     );
   };
+
 
   if (loading) {
     return (
@@ -171,7 +181,7 @@ export default function Dashboard() {
 
           <div className="flex items-baseline gap-2">
             <h1 className="text-lg font-semibold text-foreground">claudedash</h1>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v0.7.0</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">v0.9.0</span>
           </div>
 
           {/* Main nav tabs */}
@@ -271,6 +281,8 @@ export default function Dashboard() {
           <WorktreePanel />
         ) : mode === "activity" ? (
           <ActivityView />
+        ) : mode === "plans" ? (
+          <PlansLibraryView />
         ) : (
           <InsightsView />
         )}

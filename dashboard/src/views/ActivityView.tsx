@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart2, Zap, MessageSquare, GitCommit, Clock, RefreshCw, ChevronDown, ChevronRight, DollarSign, Wrench, Award } from "lucide-react";
+import { BarChart2, Zap, MessageSquare, GitCommit, Clock, RefreshCw, ChevronDown, ChevronRight, DollarSign, Wrench, Award, History, Zap as ZapIcon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type {
   UsageStats, ActivitySession, ActivitySessionsResponse,
   FacetsResponse, FacetSession, ConversationsResponse, CostResponse,
+  HistoryResponse, HistoryPrompt, BillingBlock, HookEvent,
 } from "@/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -206,9 +207,23 @@ function SessionRow({ s }: { s: ActivitySession }) {
           <div className="flex flex-wrap gap-4 text-[11px]">
             <span><span className="text-muted-foreground">Tokens in/out: </span>
               {fmtNum(s.inputTokens)} / {fmtNum(s.outputTokens)}</span>
+            {(s.filesModified ?? 0) > 0 && <span>{s.filesModified} files modified</span>}
+            {(s.linesRemoved ?? 0) > 0 && <span className="text-chart-5">-{fmtNum(s.linesRemoved)} lines</span>}
             {s.toolErrors > 0 && <span className="text-chart-5">{s.toolErrors} tool errors</span>}
+            {(s.userInterruptions ?? 0) > 0 && (
+              <span className={(s.userInterruptions ?? 0) > 3 ? "text-chart-3 font-medium" : "text-muted-foreground"}>
+                {s.userInterruptions} interruption{(s.userInterruptions ?? 0) !== 1 ? "s" : ""}
+                {(s.userInterruptions ?? 0) > 3 ? " ⚠" : ""}
+              </span>
+            )}
+            {s.usesTaskAgent && <span className="text-chart-2">Task Agent</span>}
             {s.usesMcp && <span className="text-chart-4">MCP</span>}
             {s.usesWebSearch && <span className="text-chart-4">Web Search</span>}
+            {s.durationMinutes && s.linesAdded > 0 && (
+              <span className="text-muted-foreground/60">
+                {Math.round(s.linesAdded / s.durationMinutes)} lines/min
+              </span>
+            )}
           </div>
           {topTools.length > 0 && (
             <div className="flex gap-2 flex-wrap">
@@ -508,6 +523,165 @@ function CostSection({ data }: { data: CostResponse }) {
   );
 }
 
+// ── Billing Block Widget ──────────────────────────────────────────────────────
+function BillingBlockWidget({ data }: { data: BillingBlock }) {
+  if (!data.active || !data.tokensUsed) return null;
+  const elapsed = data.minutesElapsed ?? 0;
+  const pct = Math.min((elapsed / 300) * 100, 100);
+  const barColor = pct > 90 ? "bg-chart-5" : pct > 70 ? "bg-chart-3" : "bg-chart-2";
+  const textColor = pct > 90 ? "text-chart-5" : pct > 70 ? "text-chart-3" : "text-chart-2";
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <ZapIcon className={`size-3.5 ${textColor}`} />
+          <span className="text-xs font-semibold text-foreground">Current 5h Billing Block</span>
+        </div>
+        <span className={`text-sm font-bold ${textColor}`}>~${(data.estimatedCostUSD ?? 0).toFixed(2)}</span>
+      </div>
+      <div className="bg-muted rounded-full h-1.5 mb-2">
+        <div className={`${barColor} h-1.5 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>{elapsed}m elapsed</span>
+        <span>{fmtNum(data.tokensUsed ?? 0)} tokens</span>
+        <span>{data.minutesRemaining ?? 0}m remaining</span>
+      </div>
+      {data.breakdown && (
+        <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground/60">
+          <span>In: {fmtNum(data.breakdown.input)}</span>
+          <span>Out: {fmtNum(data.breakdown.output)}</span>
+          <span>Cache: {fmtNum(data.breakdown.cacheRead)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Prompt History ────────────────────────────────────────────────────────────
+function PromptHistorySection({ data }: { data: HistoryResponse }) {
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const filtered = search
+    ? data.prompts.filter(p =>
+        p.display.toLowerCase().includes(search.toLowerCase()) ||
+        (p.projectName ?? "").toLowerCase().includes(search.toLowerCase())
+      )
+    : data.prompts;
+
+  const maxCount = data.topProjects[0]?.count ?? 1;
+
+  return (
+    <div className="space-y-4">
+      {/* Top projects */}
+      {data.topProjects.length > 0 && (
+        <div className="bg-card border border-border rounded-lg p-5 space-y-2">
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Most Active Projects
+          </h4>
+          {data.topProjects.slice(0, 5).map(({ path, name, count }) => (
+            <HBar key={path} label={name} value={count} max={maxCount} colorClass="bg-chart-4" sub={`${count} prompts`} />
+          ))}
+        </div>
+      )}
+
+      {/* Prompt search + list */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+            Recent Prompts ({data.total})
+          </h4>
+          <input
+            type="text"
+            placeholder="Search prompts…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="ml-auto bg-background border border-border rounded-lg px-3 py-1 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-ring w-48"
+          />
+        </div>
+        <div className="space-y-1">
+          {filtered.slice(0, 30).map((p: HistoryPrompt, i) => {
+            const key = `${p.sessionId}-${i}`;
+            const isExpanded = expanded === key;
+            return (
+              <div key={key} className="bg-card border border-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setExpanded(isExpanded ? null : key)}
+                  className="w-full text-left px-3 py-2 hover:bg-accent/30 transition-colors flex items-start gap-2"
+                >
+                  <History className="size-3 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-foreground truncate">{p.display || "(empty)"}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground/60">
+                      {p.projectName && <span>{p.projectName}</span>}
+                      <span>{new Date(p.timestamp).toLocaleDateString("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="border-t border-border px-3 py-2 bg-sidebar/30 text-[10px] text-muted-foreground/70 space-y-1">
+                    <p className="break-words">{p.display}</p>
+                    <p className="font-mono opacity-50">{p.project}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="text-xs text-muted-foreground/60 text-center py-4">No matching prompts</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Hook Event Feed ───────────────────────────────────────────────────────────
+const TOOL_EMOJI: Record<string, string> = {
+  Bash: "⚡", Read: "📖", Edit: "✏️", Write: "💾", Glob: "🔍",
+  Grep: "🔎", Task: "🤖", WebFetch: "🌐", WebSearch: "🔍", TodoWrite: "📋",
+};
+
+function HookFeedSection({ events, hasHooks }: { events: HookEvent[]; hasHooks: boolean }) {
+  if (!hasHooks) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-5 text-center">
+        <ZapIcon className="size-8 mx-auto mb-2 text-muted-foreground/30" />
+        <p className="text-sm text-muted-foreground mb-2">No hook events yet</p>
+        <p className="text-[11px] text-muted-foreground/60 mb-3">
+          Install hooks for real-time tool event streaming:
+        </p>
+        <code className="text-[11px] bg-muted px-2 py-1 rounded">npx claudedash hooks install</code>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-5">
+      <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+        Live Tool Events ({events.length})
+      </h4>
+      <div className="space-y-1 max-h-64 overflow-y-auto">
+        {events.slice(0, 50).map((e, i) => (
+          <div key={i} className="flex items-center gap-2 text-[11px] py-0.5">
+            <span className="shrink-0">{TOOL_EMOJI[e.tool ?? ""] ?? "🔧"}</span>
+            <span className="font-medium text-foreground">{e.tool ?? e.event}</span>
+            {e.session && <span className="text-muted-foreground/50 font-mono">{e.session.slice(0, 6)}</span>}
+            <span className="ml-auto text-muted-foreground/40 shrink-0">
+              {new Date(e.receivedAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          </div>
+        ))}
+        {events.length === 0 && (
+          <p className="text-xs text-muted-foreground/60">Waiting for events… Run a Claude Code session.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ActivityView ─────────────────────────────────────────────────────────
 export function ActivityView() {
   const [stats, setStats] = useState<UsageStats | null>(null);
@@ -515,20 +689,27 @@ export function ActivityView() {
   const [facets, setFacets] = useState<FacetsResponse | null>(null);
   const [conversations, setConversations] = useState<ConversationsResponse | null>(null);
   const [cost, setCost] = useState<CostResponse | null>(null);
+  const [history, setHistory] = useState<HistoryResponse | null>(null);
+  const [billingBlock, setBillingBlock] = useState<BillingBlock | null>(null);
+  const [hookEvents, setHookEvents] = useState<HookEvent[]>([]);
+  const [hasHooks, setHasHooks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "quality" | "tools">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "quality" | "tools" | "history" | "hooks">("overview");
 
   const load = async () => {
     setLoading(true);
     setError(false);
     try {
-      const [usageRes, sessionsRes, facetsRes, convsRes, costRes] = await Promise.all([
+      const [usageRes, sessionsRes, facetsRes, convsRes, costRes, historyRes, billingRes, hookRes] = await Promise.all([
         fetch("/usage"),
         fetch("/activity/sessions"),
         fetch("/facets"),
         fetch("/conversations"),
         fetch("/cost"),
+        fetch("/history"),
+        fetch("/billing-block"),
+        fetch("/hook/events"),
       ]);
       if (usageRes.ok) setStats(await usageRes.json() as UsageStats);
       if (sessionsRes.ok) {
@@ -538,6 +719,13 @@ export function ActivityView() {
       if (facetsRes.ok) setFacets(await facetsRes.json() as FacetsResponse);
       if (convsRes.ok) setConversations(await convsRes.json() as ConversationsResponse);
       if (costRes.ok) setCost(await costRes.json() as CostResponse);
+      if (historyRes.ok) setHistory(await historyRes.json() as HistoryResponse);
+      if (billingRes.ok) setBillingBlock(await billingRes.json() as BillingBlock);
+      if (hookRes.ok) {
+        const hookData = await hookRes.json() as { events: HookEvent[] };
+        setHookEvents(hookData.events);
+        setHasHooks(hookData.events.length > 0);
+      }
       if (!usageRes.ok && !sessionsRes.ok) setError(true);
     } catch {
       setError(true);
@@ -579,10 +767,15 @@ export function ActivityView() {
   const facetCount = facets?.sessions.length ?? 0;
   const convCount = conversations?.sessions.length ?? 0;
 
+  const historyCount = history?.total ?? 0;
+  const hookCount = hookEvents.length;
+
   const tabs = [
     { id: "overview" as const, label: "Overview" },
-    { id: "quality" as const, label: `Session Quality${facetCount > 0 ? ` (${facetCount})` : ""}` },
-    { id: "tools" as const, label: `Tool Analytics${convCount > 0 ? ` (${convCount})` : ""}` },
+    { id: "quality" as const, label: `Quality${facetCount > 0 ? ` (${facetCount})` : ""}` },
+    { id: "tools" as const, label: `Tools${convCount > 0 ? ` (${convCount})` : ""}` },
+    { id: "history" as const, label: `History${historyCount > 0 ? ` (${historyCount})` : ""}` },
+    { id: "hooks" as const, label: `Hooks${hookCount > 0 ? ` (${hookCount})` : ""}` },
   ];
 
   return (
@@ -651,6 +844,9 @@ export function ActivityView() {
                 />
               </div>
 
+              {/* Billing block widget */}
+              {billingBlock && <BillingBlockWidget data={billingBlock} />}
+
               {/* Cost widget */}
               {cost && <CostSection data={cost} />}
 
@@ -712,6 +908,14 @@ export function ActivityView() {
 
           {activeTab === "tools" && conversations && (
             <ToolAnalyticsSection data={conversations} />
+          )}
+
+          {activeTab === "history" && history && (
+            <PromptHistorySection data={history} />
+          )}
+
+          {activeTab === "hooks" && (
+            <HookFeedSection events={hookEvents} hasHooks={hasHooks} />
           )}
         </div>
       </ScrollArea>
