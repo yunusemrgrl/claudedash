@@ -18,6 +18,9 @@ export interface TokenUsage {
   outputTokens: number;
   cacheCreationTokens: number;
   cacheReadTokens: number;
+  /** Tokens from the most recent API call only — used for context health estimation. */
+  lastInputTokens?: number;
+  lastCacheReadTokens?: number;
 }
 
 export interface ClaudeSession {

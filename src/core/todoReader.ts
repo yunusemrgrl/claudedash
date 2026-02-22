@@ -286,6 +286,10 @@ function extractMetaFromJsonl(filePath: string, dirName: string): SessionMeta | 
             usage.outputTokens += u.output_tokens || 0;
             usage.cacheCreationTokens += u.cache_creation_input_tokens || 0;
             usage.cacheReadTokens += u.cache_read_input_tokens || 0;
+            // Overwrite (not accumulate) — tracks only the most recent message
+            // so contextHealth reflects the current window, not lifetime totals.
+            usage.lastInputTokens = u.input_tokens || 0;
+            usage.lastCacheReadTokens = u.cache_read_input_tokens || 0;
             hasUsage = true;
           }
         } catch { /* skip */ }

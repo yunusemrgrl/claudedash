@@ -44,9 +44,14 @@ function deriveWarningLevel(percentage: number): ContextWarningLevel {
 export function estimateContextPercentage(session: ClaudeSession, maxTokens = DEFAULT_MAX_TOKENS): number | null {
   if (!session.tokenUsage) return null;
 
-  // Cache read tokens also occupy the context window, so include them
-  const { inputTokens, cacheReadTokens } = session.tokenUsage;
-  const tokensInContext = inputTokens + cacheReadTokens;
+  const { inputTokens, cacheReadTokens, lastInputTokens, lastCacheReadTokens } = session.tokenUsage;
+
+  // Prefer last-message tokens: they reflect the actual context window for the most
+  // recent API call (input + cache_read = total tokens in window for that request).
+  // Cumulative totals span the full session lifetime and will far exceed any window.
+  const contextInput = lastInputTokens ?? inputTokens;
+  const contextCacheRead = lastCacheReadTokens ?? cacheReadTokens;
+  const tokensInContext = contextInput + contextCacheRead;
   if (tokensInContext <= 0) return null;
 
   const percentage = Math.min(100, (tokensInContext / maxTokens) * 100);
@@ -63,7 +68,8 @@ export function buildContextHealth(session: ClaudeSession, model?: string): Cont
   const percentage = estimateContextPercentage(session, maxTokens);
   if (percentage === null) return null;
 
-  const tokensUsed = session.tokenUsage!.inputTokens + session.tokenUsage!.cacheReadTokens;
+  const { inputTokens, cacheReadTokens, lastInputTokens, lastCacheReadTokens } = session.tokenUsage!;
+  const tokensUsed = (lastInputTokens ?? inputTokens) + (lastCacheReadTokens ?? cacheReadTokens);
 
   return {
     percentage,
