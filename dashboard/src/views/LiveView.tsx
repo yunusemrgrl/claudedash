@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import type { ClaudeSession, ClaudeTask, TokenUsage, QueueSummary, AgentRecord, HistoryPrompt, BillingBlock } from "@/types";
 import { ContextHealthMini, ContextHealthWidget } from "@/components/ContextHealthWidget";
@@ -8,6 +8,7 @@ import { TypingPrompt } from "@/components/TypingPrompt";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getStatusColor, getStatusLabel } from "@/lib/status";
 import { useSessions } from "@/hooks/useSessions";
+import { useSSEEvents } from "@/hooks/useSSEEvents";
 
 export function LiveView({
   searchQuery,
@@ -67,7 +68,7 @@ export function LiveView({
     return Math.round(remaining / rate);
   };
 
-  // Poll agent API + history data every 15 seconds
+  // Poll lightweight agent APIs every 15 seconds
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -88,38 +89,57 @@ export function LiveView({
           if (compact) setLastCompaction({ at: compact.receivedAt, phase: compact.event === 'PreCompact' ? 'pre' : 'post' });
         })
         .catch(() => {});
-      void fetch("/billing-block", { signal })
-        .then((r) => r.ok ? r.json() : null)
-        .then((d) => { if (d) setBillingBlock(d as BillingBlock); })
-        .catch(() => {});
-      void fetch("/history", { signal })
-        .then((r) => r.ok ? r.json() : null)
-        .then((d: { prompts?: HistoryPrompt[] } | null) => {
-          if (!d?.prompts) return;
-          // Group by sessionId, keep the latest entry per session
-          const map = new Map<string, HistoryPrompt>();
-          for (const p of d.prompts) {
-            const existing = map.get(p.sessionId);
-            if (!existing || p.timestamp > existing.timestamp) map.set(p.sessionId, p);
-          }
-          setResumableSessions(
-            [...map.values()]
-              .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-              .slice(0, 5)
-              .map((p) => ({
-                sessionId: p.sessionId,
-                projectName: p.projectName,
-                lastPrompt: p.display,
-                updatedAt: p.timestamp,
-              })),
-          );
-        })
-        .catch(() => {});
     }
     fetchAgentData();
     const iv = setInterval(fetchAgentData, 15_000);
     return () => { clearInterval(iv); controller.abort(); };
   }, []);
+
+  // /billing-block: heavy endpoint, poll every 5 minutes
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchBilling = () => {
+      void fetch("/billing-block", { signal: controller.signal })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d) setBillingBlock(d as BillingBlock); })
+        .catch(() => {});
+    };
+    fetchBilling();
+    const iv = setInterval(fetchBilling, 5 * 60_000);
+    return () => { clearInterval(iv); controller.abort(); };
+  }, []);
+
+  // /history: fetch on mount and whenever sessions update via SSE
+  const fetchHistory = useCallback(() => {
+    void fetch("/history")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { prompts?: HistoryPrompt[] } | null) => {
+        if (!d?.prompts) return;
+        const map = new Map<string, HistoryPrompt>();
+        for (const p of d.prompts) {
+          const existing = map.get(p.sessionId);
+          if (!existing || p.timestamp > existing.timestamp) map.set(p.sessionId, p);
+        }
+        setResumableSessions(
+          [...map.values()]
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+            .slice(0, 5)
+            .map((p) => ({
+              sessionId: p.sessionId,
+              projectName: p.projectName,
+              lastPrompt: p.display,
+              updatedAt: p.timestamp,
+            })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  useSSEEvents((data) => {
+    if (data.type === "sessions") fetchHistory();
+  });
 
   const CLAUDE_MD_SNIPPET = `You MUST use the TodoWrite tool to track your work.\nAt the START of any multi-step task, create a todo list with all steps.\nMark each task in_progress before starting, completed after finishing.`;
 
