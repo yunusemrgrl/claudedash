@@ -17,6 +17,7 @@ medium.md
 
 # Auto-generated files
 dashboard/next-env.d.ts
+dashboard/tsconfig.tsbuildinfo
 docs/dev-log.md
 *.png
 # Landing page assets are tracked
