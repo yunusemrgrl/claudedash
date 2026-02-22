@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ClaudeSession, ComputedTask, SessionsResponse, SnapshotResponse } from "@/types";
+import { useSSEEvents, useSSEConnected } from "./useSSEEvents";
 
 function notify(title: string, body: string) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -56,7 +57,7 @@ function diffPlanTasks(
 
 export function useNotifications() {
   const [showDeniedBanner, setShowDeniedBanner] = useState(false);
-  const [sseConnected, setSseConnected] = useState(false);
+  const sseConnected = useSSEConnected();
   const prevLiveMap = useRef<Map<string, string>>(new Map());
   const prevPlanMap = useRef<Map<string, string>>(new Map());
   const initializedLive = useRef(false);
@@ -78,100 +79,80 @@ export function useNotifications() {
     }
   }, []);
 
-  // SSE listener for task changes
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  useSSEEvents((event) => {
+    if (event.type === "sessions") {
+      void fetch("/sessions")
+        .then((r) => r.json())
+        .then((data: SessionsResponse) => {
+          const allTasks = data.sessions.flatMap((s) => s.tasks);
 
-    const es = new EventSource("/events/");
-    es.onopen = () => setSseConnected(true);
-    es.onerror = () => setSseConnected(false);
-
-    es.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data as string) as { type: string };
-
-        if (parsed.type === "sessions") {
-          void fetch("/sessions")
-            .then((r) => r.json())
-            .then((data: SessionsResponse) => {
-              const allTasks = data.sessions.flatMap((s) => s.tasks);
-
-              if (initializedLive.current) {
-                const changes = diffLiveTasks(prevLiveMap.current, data.sessions);
-                for (const change of changes) {
-                  const key = `live:${change.subject}`;
-                  if (!notifiedSet.current.has(key)) {
-                    notifiedSet.current.add(key);
-                    const body = change.project
-                      ? `${change.subject}\n${change.project}`
-                      : change.subject;
-                    notify("Task completed ✓", body);
-                  }
-                }
+          if (initializedLive.current) {
+            const changes = diffLiveTasks(prevLiveMap.current, data.sessions);
+            for (const change of changes) {
+              const key = `live:${change.subject}`;
+              if (!notifiedSet.current.has(key)) {
+                notifiedSet.current.add(key);
+                const body = change.project
+                  ? `${change.subject}\n${change.project}`
+                  : change.subject;
+                notify("Task completed ✓", body);
               }
-
-              updateTabTitle(0, 0);
-
-              const newMap = new Map<string, string>();
-              for (const task of allTasks) newMap.set(task.id, task.status);
-              prevLiveMap.current = newMap;
-              initializedLive.current = true;
-            });
-        }
-
-        if (parsed.type === "task-blocked") {
-          const ev = parsed as { type: string; task_id?: string; reason?: string; agent?: string };
-          const key = `blocked:${ev.task_id}:${ev.reason ?? ""}`;
-          if (!notifiedSet.current.has(key)) {
-            notifiedSet.current.add(key);
-            const title = `Task BLOCKED: ${ev.task_id ?? "?"}`;
-            const body = ev.reason ? `${ev.reason}` : `Reported by ${ev.agent ?? "agent"}`;
-            notify(title, body);
+            }
           }
-        }
 
-        if (parsed.type === "plan") {
-          void fetch("/snapshot")
-            .then((r) => r.json())
-            .then((data: SnapshotResponse) => {
-              const tasks = data.snapshot?.tasks ?? [];
+          updateTabTitle(0, 0);
 
-              if (initializedPlan.current) {
-                const changes = diffPlanTasks(prevPlanMap.current, tasks);
-                for (const change of changes) {
-                  const key = `plan:${change.id}:${change.status}`;
-                  if (notifiedSet.current.has(key)) continue;
-                  notifiedSet.current.add(key);
-                  if (change.status === "DONE") {
-                    notify("Plan task done ✓", `${change.id}: ${change.description}`);
-                  } else if (change.status === "FAILED") {
-                    notify("Task failed ✗", `${change.id}: ${change.description}`);
-                  } else if (change.status === "BLOCKED") {
-                    notify("Task blocked ⚠", `${change.id}: ${change.description}`);
-                  }
-                }
-              }
+          const newMap = new Map<string, string>();
+          for (const task of allTasks) newMap.set(task.id, task.status);
+          prevLiveMap.current = newMap;
+          initializedLive.current = true;
+        });
+    }
 
-              const failedCount = data.snapshot?.summary.failed ?? 0;
-              const blockedCount = data.snapshot?.summary.blocked ?? 0;
-              updateTabTitle(blockedCount, failedCount);
-
-              const newMap = new Map<string, string>();
-              for (const task of tasks) newMap.set(task.id, task.status);
-              prevPlanMap.current = newMap;
-              initializedPlan.current = true;
-            });
-        }
-      } catch {
-        // ignore parse errors
+    if (event.type === "task-blocked") {
+      const ev = event as { type: string; task_id?: string; reason?: string; agent?: string };
+      const key = `blocked:${ev.task_id}:${ev.reason ?? ""}`;
+      if (!notifiedSet.current.has(key)) {
+        notifiedSet.current.add(key);
+        const title = `Task BLOCKED: ${ev.task_id ?? "?"}`;
+        const body = ev.reason ? `${ev.reason}` : `Reported by ${ev.agent ?? "agent"}`;
+        notify(title, body);
       }
-    };
+    }
 
-    return () => {
-      es.close();
-      setSseConnected(false);
-    };
-  }, []);
+    if (event.type === "plan") {
+      void fetch("/snapshot")
+        .then((r) => r.json())
+        .then((data: SnapshotResponse) => {
+          const tasks = data.snapshot?.tasks ?? [];
+
+          if (initializedPlan.current) {
+            const changes = diffPlanTasks(prevPlanMap.current, tasks);
+            for (const change of changes) {
+              const key = `plan:${change.id}:${change.status}`;
+              if (notifiedSet.current.has(key)) continue;
+              notifiedSet.current.add(key);
+              if (change.status === "DONE") {
+                notify("Plan task done ✓", `${change.id}: ${change.description}`);
+              } else if (change.status === "FAILED") {
+                notify("Task failed ✗", `${change.id}: ${change.description}`);
+              } else if (change.status === "BLOCKED") {
+                notify("Task blocked ⚠", `${change.id}: ${change.description}`);
+              }
+            }
+          }
+
+          const failedCount = data.snapshot?.summary.failed ?? 0;
+          const blockedCount = data.snapshot?.summary.blocked ?? 0;
+          updateTabTitle(blockedCount, failedCount);
+
+          const newMap = new Map<string, string>();
+          for (const task of tasks) newMap.set(task.id, task.status);
+          prevPlanMap.current = newMap;
+          initializedPlan.current = true;
+        });
+    }
+  });
 
   return {
     showDeniedBanner,

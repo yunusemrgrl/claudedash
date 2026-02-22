@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { SnapshotResponse } from "@/types";
+import { useSSEEvents } from "./useSSEEvents";
 
 export function usePlanSnapshot() {
   const [data, setData] = useState<SnapshotResponse | null>(null);
@@ -17,17 +18,11 @@ export function usePlanSnapshot() {
 
   useEffect(() => {
     fetchSnapshot();
-    const es = new EventSource("/events/");
-    es.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data);
-        if (parsed.type === "plan") fetchSnapshot();
-      } catch {
-        // ignore
-      }
-    };
-    return () => es.close();
   }, [fetchSnapshot]);
+
+  useSSEEvents((data) => {
+    if (data.type === "plan") void fetchSnapshot();
+  });
 
   return { data, refresh: fetchSnapshot };
 }
