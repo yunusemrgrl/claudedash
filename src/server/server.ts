@@ -76,9 +76,44 @@ export async function startServer(options: ServerOptions): Promise<void> {
 
   fastify.addHook('onClose', async () => { await watcher.close(); });
 
+  // ── Endpoint timing metrics ───────────────────────────────────────────────
+  // Rolling ring buffer of last 100 response times per route (ms).
+  const RING_SIZE = 100;
+  const timings = new Map<string, number[]>();
+
+  fastify.addHook('onResponse', (request, reply, done) => {
+    const route = request.routeOptions?.url ?? request.url.split('?')[0];
+    // Skip SSE stream, static files, and the timing endpoint itself
+    if (route === '/events' || route === '/debug/timing' || reply.getHeader('content-type')?.toString().startsWith('text/event-stream')) {
+      done(); return;
+    }
+    const ms = reply.elapsedTime;
+    const buf = timings.get(route) ?? [];
+    buf.push(ms);
+    if (buf.length > RING_SIZE) buf.shift();
+    timings.set(route, buf);
+    done();
+  });
+
+  fastify.get('/debug/timing', async () => {
+    const result: Record<string, { p50: number; p95: number; max: number; samples: number }> = {};
+    for (const [route, samples] of timings) {
+      if (samples.length === 0) continue;
+      const sorted = [...samples].sort((a, b) => a - b);
+      const p = (pct: number) => sorted[Math.min(Math.floor(sorted.length * pct / 100), sorted.length - 1)];
+      result[route] = {
+        p50: Math.round(p(50) * 10) / 10,
+        p95: Math.round(p(95) * 10) / 10,
+        max: Math.round(Math.max(...sorted) * 10) / 10,
+        samples: sorted.length,
+      };
+    }
+    return result;
+  });
+
   await fastify.register(liveRoutes, { claudeDir, planDir, emitter });
   await fastify.register(planRoutes, { claudeDir, planDir, emitter });
-  await fastify.register(observabilityRoutes, { claudeDir });
+  await fastify.register(observabilityRoutes, { claudeDir, emitter });
 
   // Serve static dashboard + SPA fallback
   const publicPath = join(__dirname, '../public');

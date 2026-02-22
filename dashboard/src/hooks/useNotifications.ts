@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ClaudeSession, ComputedTask, SessionsResponse, SnapshotResponse } from "@/types";
+import type { ClaudeSession, ComputedTask } from "@/types";
 import { useSSEEvents, useSSEConnected } from "./useSSEEvents";
+import { getLatestSessions } from "./useSessions";
+import { getLatestSnapshot } from "./usePlanSnapshot";
 
 function notify(title: string, body: string) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -81,32 +83,30 @@ export function useNotifications() {
 
   useSSEEvents((event) => {
     if (event.type === "sessions") {
-      void fetch("/sessions")
-        .then((r) => r.json())
-        .then((data: SessionsResponse) => {
-          const allTasks = data.sessions.flatMap((s) => s.tasks);
+      // Read from module-level store updated by useSessions — no duplicate fetch
+      const sessionList = getLatestSessions();
+      const allTasks = sessionList.flatMap((s) => s.tasks);
 
-          if (initializedLive.current) {
-            const changes = diffLiveTasks(prevLiveMap.current, data.sessions);
-            for (const change of changes) {
-              const key = `live:${change.subject}`;
-              if (!notifiedSet.current.has(key)) {
-                notifiedSet.current.add(key);
-                const body = change.project
-                  ? `${change.subject}\n${change.project}`
-                  : change.subject;
-                notify("Task completed ✓", body);
-              }
-            }
+      if (initializedLive.current) {
+        const changes = diffLiveTasks(prevLiveMap.current, sessionList);
+        for (const change of changes) {
+          const key = `live:${change.subject}`;
+          if (!notifiedSet.current.has(key)) {
+            notifiedSet.current.add(key);
+            const body = change.project
+              ? `${change.subject}\n${change.project}`
+              : change.subject;
+            notify("Task completed ✓", body);
           }
+        }
+      }
 
-          updateTabTitle(0, 0);
+      updateTabTitle(0, 0);
 
-          const newMap = new Map<string, string>();
-          for (const task of allTasks) newMap.set(task.id, task.status);
-          prevLiveMap.current = newMap;
-          initializedLive.current = true;
-        });
+      const newMap = new Map<string, string>();
+      for (const task of allTasks) newMap.set(task.id, task.status);
+      prevLiveMap.current = newMap;
+      initializedLive.current = true;
     }
 
     if (event.type === "task-blocked") {
@@ -121,36 +121,34 @@ export function useNotifications() {
     }
 
     if (event.type === "plan") {
-      void fetch("/snapshot")
-        .then((r) => r.json())
-        .then((data: SnapshotResponse) => {
-          const tasks = data.snapshot?.tasks ?? [];
+      // Read from module-level store updated by usePlanSnapshot — no duplicate fetch
+      const snapshotData = getLatestSnapshot();
+      const tasks = snapshotData?.snapshot?.tasks ?? [];
 
-          if (initializedPlan.current) {
-            const changes = diffPlanTasks(prevPlanMap.current, tasks);
-            for (const change of changes) {
-              const key = `plan:${change.id}:${change.status}`;
-              if (notifiedSet.current.has(key)) continue;
-              notifiedSet.current.add(key);
-              if (change.status === "DONE") {
-                notify("Plan task done ✓", `${change.id}: ${change.description}`);
-              } else if (change.status === "FAILED") {
-                notify("Task failed ✗", `${change.id}: ${change.description}`);
-              } else if (change.status === "BLOCKED") {
-                notify("Task blocked ⚠", `${change.id}: ${change.description}`);
-              }
-            }
+      if (initializedPlan.current) {
+        const changes = diffPlanTasks(prevPlanMap.current, tasks);
+        for (const change of changes) {
+          const key = `plan:${change.id}:${change.status}`;
+          if (notifiedSet.current.has(key)) continue;
+          notifiedSet.current.add(key);
+          if (change.status === "DONE") {
+            notify("Plan task done ✓", `${change.id}: ${change.description}`);
+          } else if (change.status === "FAILED") {
+            notify("Task failed ✗", `${change.id}: ${change.description}`);
+          } else if (change.status === "BLOCKED") {
+            notify("Task blocked ⚠", `${change.id}: ${change.description}`);
           }
+        }
+      }
 
-          const failedCount = data.snapshot?.summary.failed ?? 0;
-          const blockedCount = data.snapshot?.summary.blocked ?? 0;
-          updateTabTitle(blockedCount, failedCount);
+      const failedCount = snapshotData?.snapshot?.summary.failed ?? 0;
+      const blockedCount = snapshotData?.snapshot?.summary.blocked ?? 0;
+      updateTabTitle(blockedCount, failedCount);
 
-          const newMap = new Map<string, string>();
-          for (const task of tasks) newMap.set(task.id, task.status);
-          prevPlanMap.current = newMap;
-          initializedPlan.current = true;
-        });
+      const newMap = new Map<string, string>();
+      for (const task of tasks) newMap.set(task.id, task.status);
+      prevPlanMap.current = newMap;
+      initializedPlan.current = true;
     }
   });
 

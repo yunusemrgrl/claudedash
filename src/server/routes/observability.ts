@@ -4,20 +4,31 @@ import { join, basename } from 'path';
 import { readSessions } from '../../core/todoReader.js';
 import { detectWorktrees, enrichWorktreeStatus } from '../../core/worktreeDetector.js';
 import { mapTasksToWorktrees } from '../../core/worktreeMapper.js';
+import type { EventEmitter } from 'events';
+import type { WatchEvent } from '../watcher.js';
 
 export interface ObservabilityRouteOptions {
   claudeDir: string;
+  emitter?: EventEmitter;
 }
 
 export async function observabilityRoutes(fastify: FastifyInstance, opts: ObservabilityRouteOptions): Promise<void> {
-  const { claudeDir } = opts;
+  const { claudeDir, emitter } = opts;
 
   // ── Server-side caches ────────────────────────────────────────────────────
   // /history: mtime-based — only re-parse history.jsonl when file changes
   let historyCache: { mtime: number; result: unknown } | null = null;
 
-  // /billing-block: 60s TTL — scanning all project JSONLs is expensive
+  // /billing-block: watcher-invalidated + 60s TTL fallback
   let billingCache: { expireAt: number; result: unknown } | null = null;
+
+  // /conversations: mtime-based — key is the max mtime across the 20 sampled files
+  let conversationsCache: { maxMtime: number; result: unknown } | null = null;
+
+  // Invalidate billing cache when any session file changes (watcher fires 'sessions' events)
+  emitter?.on('change', (event: WatchEvent) => {
+    if (event.type === 'sessions') billingCache = null;
+  });
 
   // GET /usage — reads ~/.claude/stats-cache.json (written by Claude Code)
   fastify.get('/usage', async (_req, reply) => {
@@ -292,14 +303,22 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       }
 
       // Sort by mtime desc, take last 20
+      const mtimes = new Map<string, number>();
       jsonlFiles.sort((a, b) => {
         try {
-          return statSync(b).mtimeMs - statSync(a).mtimeMs;
+          const ma = statSync(a).mtimeMs; mtimes.set(a, ma);
+          const mb = statSync(b).mtimeMs; mtimes.set(b, mb);
+          return mb - ma;
         } catch { return 0; }
       });
+      const top20 = jsonlFiles.slice(0, 20);
+      const maxMtime = top20.reduce((m, f) => Math.max(m, mtimes.get(f) ?? 0), 0);
+      if (conversationsCache && conversationsCache.maxMtime === maxMtime) {
+        return conversationsCache.result;
+      }
 
       // Process up to 20 most recent
-      for (const filePath of jsonlFiles.slice(0, 20)) {
+      for (const filePath of top20) {
         try {
           const raw = readFileSync(filePath, 'utf8');
           const lines = raw.split('\n').filter(l => l.trim());
@@ -380,7 +399,7 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
 
       const totalTools = Object.values(globalToolCounts).reduce((a, b) => a + b, 0);
 
-      return {
+      const convResult = {
         sessions: results,
         aggregate: {
           totalConversations: results.length,
@@ -390,6 +409,8 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
           errorRate: totalTools > 0 ? Math.round((globalErrorCount / totalTools) * 100) / 100 : 0,
         },
       };
+      conversationsCache = { maxMtime, result: convResult };
+      return convResult;
     } catch {
       return reply.code(500).send({ error: 'Failed to read conversations' });
     }

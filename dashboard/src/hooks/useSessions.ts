@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { ClaudeSession, SessionsResponse } from "@/types";
 import { useSSEEvents, useSSEConnected } from "./useSSEEvents";
 
+// Module-level store — updated after every successful fetch so useNotifications
+// can read the latest sessions without its own duplicate /sessions request.
+let _latestSessions: ClaudeSession[] = [];
+export function getLatestSessions(): ClaudeSession[] { return _latestSessions; }
+
 export function useSessions(showAll = false) {
   const [sessions, setSessions] = useState<ClaudeSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ClaudeSession | null>(null);
@@ -19,6 +24,7 @@ export function useSessions(showAll = false) {
       const response = await fetch(url);
       if (!response.ok) return;
       const result: SessionsResponse & { total?: number; filtered?: number } = await response.json();
+      _latestSessions = result.sessions;
       setSessions(result.sessions);
       if (result.total != null) {
         setSessionCounts({ total: result.total, filtered: result.filtered ?? result.sessions.length });
