@@ -131,9 +131,6 @@ export interface QualityEvent {
   sessionId?: string;
 }
 
-export interface QualityTimelineResponse {
-  events: QualityEvent[];
-}
 
 // Context Health types
 export type ContextWarningLevel = 'safe' | 'warn' | 'critical';
