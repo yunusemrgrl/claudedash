@@ -28,3 +28,9 @@ docs/dev-log.md
 !landing/assets/*.png
 !landing/assets/*.gif
 !landing/assets/*.mp4
+# Marketing assets are tracked
+!docs/marketing/*.png
+!docs/marketing/screenshots/*.png
+
+# Auto-generated
+dashboard/tsconfig.tsbuildinfo

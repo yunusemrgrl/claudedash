@@ -6,6 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?labelColor=0f0f12)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/yunusemrgrl/claudedash/actions/workflows/ci.yml/badge.svg)](https://github.com/yunusemrgrl/claudedash/actions/workflows/ci.yml)
 
+![claudedash — real-time observability for Claude Code agents](docs/marketing/github-og.png)
+
 ---
 
 ## The Problem
@@ -78,32 +80,32 @@ Live mode is on by default. Both modes can run simultaneously.
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="landing/assets/live.png" alt="Live View" /><br/>
+      <img src="docs/marketing/screenshots/hero-dashboard.png" alt="Live View" /><br/>
       <sub><b>Live View</b> — Session Kanban + context health per agent</sub>
     </td>
     <td align="center" width="50%">
-      <img src="landing/assets/queue.png" alt="Queue" /><br/>
+      <img src="docs/marketing/screenshots/plan-mode.png" alt="Queue" /><br/>
       <sub><b>Queue</b> — Plan mode task board with dependency graph</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="landing/assets/worktrees.png" alt="Worktrees" /><br/>
+      <img src="docs/marketing/screenshots/worktrees-multi.png" alt="Worktrees" /><br/>
       <sub><b>Worktrees</b> — Parallel agents across git branches</sub>
     </td>
     <td align="center" width="50%">
-      <img src="landing/assets/activity.gif" alt="Activity" /><br/>
-      <sub><b>Activity</b> — Tool analytics + full prompt history</sub>
+      <img src="docs/marketing/screenshots/activity-cost.png" alt="Activity" /><br/>
+      <sub><b>Activity</b> — Cost tracker + tool analytics per session</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="landing/assets/config.png" alt="Config" /><br/>
-      <sub><b>Config</b> — Hook setup, port, token management</sub>
+      <img src="docs/marketing/screenshots/context-health.png" alt="Context Health" /><br/>
+      <sub><b>Context Health</b> — Live token usage, warnings at 65% / 75%</sub>
     </td>
     <td align="center" width="50%">
-      <img src="landing/assets/docs.png" alt="Docs" /><br/>
-      <sub><b>Docs</b> — Built-in reference for API + plan mode</sub>
+      <img src="docs/marketing/screenshots/terminal-start.png" alt="Terminal Start" /><br/>
+      <sub><b>Quick Start</b> — One command, zero config</sub>
     </td>
   </tr>
 </table>
