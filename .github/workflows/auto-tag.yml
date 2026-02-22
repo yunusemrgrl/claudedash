@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -32,51 +32,57 @@ jobs:
           echo "version=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "plain=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Check if tag already exists
-        id: tag_check
+      - name: Check if already published to npm
+        id: npm_check
         run: |
-          if git ls-remote --tags origin "${{ steps.version.outputs.version }}" | grep -q .; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          if npm view "claudedash@${{ steps.version.outputs.plain }}" version 2>/dev/null | grep -q "${{ steps.version.outputs.plain }}"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.npm_check.outputs.published == 'false'
         run: npm ci
 
       - name: Install dashboard dependencies
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.npm_check.outputs.published == 'false'
         run: cd dashboard && npm ci
 
       - name: Run tests
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.npm_check.outputs.published == 'false'
         run: npm test
 
       - name: Build
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.npm_check.outputs.published == 'false'
         run: npm run build
 
       - name: Publish to npm
-        if: steps.tag_check.outputs.exists == 'false'
+        if: steps.npm_check.outputs.published == 'false'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create and push git tag
-        if: steps.tag_check.outputs.exists == 'false'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
+          if git ls-remote --tags origin "${{ steps.version.outputs.version }}" | grep -q .; then
+            echo "Tag ${{ steps.version.outputs.version }} already exists, skipping."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "${{ steps.version.outputs.version }}"
+            git push origin "${{ steps.version.outputs.version }}"
+          fi
 
       - name: Create GitHub Release
-        if: steps.tag_check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.version.outputs.version }}" \
-            --title "${{ steps.version.outputs.version }}" \
-            --generate-notes \
-            --latest
+          if gh release view "${{ steps.version.outputs.version }}" &>/dev/null; then
+            echo "Release ${{ steps.version.outputs.version }} already exists, skipping."
+          else
+            gh release create "${{ steps.version.outputs.version }}" \
+              --title "${{ steps.version.outputs.version }}" \
+              --generate-notes \
+              --latest
+          fi
