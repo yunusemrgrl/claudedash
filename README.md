@@ -1,59 +1,96 @@
 # claudedash
 
-See what your AI agent is actually doing.
+**See exactly what your AI agent is doing — in real time.**
 
-[![npm](https://img.shields.io/npm/v/claudedash)](https://www.npmjs.com/package/claudedash)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/claudedash?color=00f5ff&labelColor=0f0f12)](https://www.npmjs.com/package/claudedash)
+[![npm downloads](https://img.shields.io/npm/dm/claudedash?labelColor=0f0f12)](https://www.npmjs.com/package/claudedash)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?labelColor=0f0f12)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/yunusemrgrl/claudedash/actions/workflows/ci.yml/badge.svg)](https://github.com/yunusemrgrl/claudedash/actions/workflows/ci.yml)
 
 ---
 
-## The problem
+## The Problem
 
-You tell Claude Code to refactor your auth system. It says "on it." You wait. Terminal scrolls. Minutes pass. You have no idea if it's on task 2 of 12 or stuck in a loop. You're flying blind.
+You tell Claude Code: *"refactor the auth system."* It says: *"on it."*
 
-claudedash fixes that. One command, zero config. It reads Claude Code's own task files and gives you a live Kanban board.
+Terminal scrolls. Minutes pass. Is it on step 3 of 12? Stuck in a loop? Already done?
+
+**You have no idea.**
+
+claudedash fixes that. One command, zero config — a live dashboard for every Claude Code session.
 
 ```bash
 npx -y claudedash@latest start
 ```
 
-That's it. Open `localhost:4317`. Watch your agent work.
+Open `localhost:4317`. Watch your agent work.
 
-![claudedash demo](landing/assets/activitiy.mp4)
+![claudedash live demo](landing/assets/screenrecord.gif)
 
-## How it works
+---
 
-Claude Code writes task state to `~/.claude/tasks/` when it uses the TodoWrite tool. claudedash reads those files, watches for changes, and streams updates to your browser via SSE. No database. No auth. No cloud. Just files.
+## Quick Start
 
-**Important:** Claude Code only writes task files when TodoWrite is actively used. To ensure your sessions always appear on the dashboard, add this to your project's `CLAUDE.md`:
+```bash
+# Zero-install — always gets the latest version
+npx -y claudedash@latest start
 
-```markdown
-You MUST use the TodoWrite tool to track your work.
-At the START of any multi-step task, create a todo list with all steps.
-Mark each task in_progress before starting, completed after finishing.
+# Install lifecycle hooks (recommended)
+claudedash hooks install
+
+# Set up plan mode for structured task execution
+claudedash init
 ```
 
-Or run `claudedash init` — it generates a ready-to-use `CLAUDE.md` snippet.
+That's it. The dashboard auto-detects your Claude sessions.
 
-## Two modes
+---
 
-| | Live | Plan |
+## Features
+
+- **Live Kanban board** — real-time task status from `~/.claude/tasks/`, updated via SSE within ~100ms
+- **Plan mode** — structured execution with dependencies, acceptance criteria, and blocked-task detection
+- **Context health** — token usage bar per session, warnings at 65% (warn) and 75% (critical)
+- **Quality gates** — lint / typecheck / test results per task with a full timeline history
+- **Worktrees** — map parallel agents across git branches, see dirty/ahead/behind at a glance
+- **Agent API** — `POST /log`, `POST /agent/register`, heartbeat, BLOCKED → instant browser push notification
+- **Hook integration** — PostToolUse/Stop/PreCompact/PostCompact hooks stream every tool call live
+- **Cost tracker** — 5-hour rolling billing block estimate per model, real-time
+- **MCP server** — `get_queue`, `get_sessions`, `get_cost`, `log_task` — Claude can query its own dashboard
+- **Zero infra** — no database, no cloud, reads files from `~/.claude/` directly
+
+---
+
+## Live Mode vs Plan Mode
+
+| | **Live Mode** | **Plan Mode** |
 |---|---|---|
-| **What** | Watch Claude Code work | Structured project planning |
+| **What** | Watch Claude work in real time | Structured project execution |
 | **Source** | `~/.claude/tasks/` | `.claudedash/queue.md` |
-| **Setup** | None | `npx claudedash init` |
-| **Use when** | You want visibility | You want control |
+| **Setup** | None | `claudedash init` |
+| **Use when** | Visibility matters | Control matters |
+| **Deps / AC** | — | ✓ Full dependency graph |
+| **Execution log** | — | ✓ `execution.log` |
 
-Live mode is the default. Plan mode adds dependencies, acceptance criteria, and execution tracking on top.
+Live mode is on by default. Both modes can run simultaneously.
 
-| Live | Queue | Activity |
-|---|---|---|
-| ![Live](landing/assets/live.png) | ![Queue](landing/assets/queue.png) | ![Activity](landing/assets/activitiy.mp4) |
+---
 
-| Worktrees | Config | Docs |
-|---|---|---|
-| ![Worktrees](landing/assets/worktrees.png) | ![Config](landing/assets/config.png) | ![Docs](landing/assets/docs.png) |
+## Screenshots
+
+### Live View — Session Kanban + Context Health
+![Live](landing/assets/live.png)
+
+### Queue — Plan Mode Task Board
+![Queue](landing/assets/queue.png)
+
+### Worktrees — Parallel Agent Visibility
+![Worktrees](landing/assets/worktrees.png)
+
+### Activity — Tool Analytics + Prompt History
+![Activity](landing/assets/activity.gif)
+
+---
 
 ## Install
 
@@ -66,9 +103,11 @@ npm i -g claudedash
 claudedash start
 ```
 
-### Plan mode
+---
 
-For structured project execution with task dependencies and acceptance criteria.
+## Plan Mode
+
+Initialize in your project:
 
 ```bash
 claudedash init
@@ -78,66 +117,12 @@ This creates `.claudedash/` with:
 
 | File | Purpose |
 |---|---|
-| `queue.md` | Your task list — slices, dependencies, AC |
-| `workflow.md` | Execution protocol your agent follows |
-| `execution.log` | Agent logs DONE/FAILED/BLOCKED here |
-| `config.json` | Heading patterns, port, field definitions |
-| `CLAUDE.md` | Paste into your project's CLAUDE.md |
+| `queue.md` | Task list — slices, dependencies, acceptance criteria |
+| `workflow.md` | Execution protocol for your agent |
+| `execution.log` | Agent logs `DONE` / `FAILED` / `BLOCKED` here |
+| `CLAUDE.md` | Paste into your project's `CLAUDE.md` |
 
-Then:
-
-1. Edit `queue.md` with your actual tasks
-2. Copy `CLAUDE.md` contents into your project's CLAUDE.md
-3. Tell your agent: *"follow .claudedash/workflow.md, start with S1-T1"*
-4. Run `claudedash start` and watch the dashboard
-
-## CLI
-
-```bash
-claudedash start                          # Auto-detect modes, open dashboard
-claudedash start --claude-dir /path       # Custom Claude directory
-claudedash start -p 3000                  # Custom port
-claudedash start --host 0.0.0.0           # Expose to network (shows warning)
-claudedash start --token <secret>         # Enable token auth for sharing
-claudedash init                           # Init plan mode in current dir
-claudedash recover                        # Summarize last session after /clear
-claudedash spec                           # Create spec-mode templates
-claudedash worktree create <branch>       # Create isolated worktree
-```
-
-## Sharing with your team
-
-By default, claudedash only listens on `127.0.0.1` (localhost). To share the dashboard with a teammate:
-
-```bash
-# 1. Start with a secret token
-claudedash start --token mysecret123
-
-# Or use an environment variable
-CLAUDEDASH_TOKEN=mysecret123 claudedash start
-```
-
-Your teammate can then open the dashboard with the token in the URL:
-
-```
-http://your-host:4317?token=mysecret123
-```
-
-Or pass it as a header:
-
-```bash
-curl -H "Authorization: Bearer mysecret123" http://your-host:4317/sessions
-```
-
-> **Security:** Never commit your token to git. Use `.env` and add it to `.gitignore`. Consider using a local tunnel like [ngrok](https://ngrok.com) or [cloudflared](https://github.com/cloudflare/cloudflared) rather than exposing `--host 0.0.0.0` directly.
->
-> ```bash
-> # Share via tunnel without network exposure
-> claudedash start --token $(openssl rand -hex 16)
-> ngrok http 4317
-> ```
-
-## Queue format (Plan mode)
+**queue.md format:**
 
 ```markdown
 # Slice S1
@@ -146,85 +131,107 @@ curl -H "Authorization: Bearer mysecret123" http://your-host:4317/sessions
 Area: Backend
 Depends: -
 Description: Setup database schema
-AC: Tables created and migrations run
+AC: Tables created, migrations run
 
 ## S1-T2
 Area: Backend
 Depends: S1-T1
-Description: Implement user authentication
-AC: Login and registration endpoints working
+Description: Implement user auth
+AC: Login and registration working
 ```
 
-Validates: required fields, duplicate IDs, unknown deps, circular deps.
-
-## Execution log (Plan mode)
-
-Append-only JSONL:
-
-```json
-{"task_id":"S1-T1","status":"DONE","timestamp":"2026-02-16T14:31:22Z","agent":"claude"}
-{"task_id":"S1-T2","status":"FAILED","timestamp":"2026-02-16T14:33:10Z","agent":"claude","meta":{"reason":"timeout"}}
-{"task_id":"S1-T3","status":"BLOCKED","reason":"API key missing","timestamp":"2026-02-16T14:35:00Z","agent":"claude"}
+Tell your agent:
+```
+Follow .claudedash/workflow.md, start with S1-T1.
 ```
 
-## Observability Features
+---
 
-### Quality Gates
+## CLI
 
-Track lint, typecheck, and test results per task and view them as a timeline in the Plan mode dashboard.
+| Command | Description |
+|---|---|
+| `claudedash start` | Start dashboard (auto-detect modes) |
+| `claudedash start -p 3000` | Custom port |
+| `claudedash start --token <secret>` | Enable auth token |
+| `claudedash init` | Init plan mode in current directory |
+| `claudedash hooks install` | Install PostToolUse/Stop/PreCompact hooks |
+| `claudedash status` | Single-line terminal summary (no browser) |
+| `claudedash doctor` | Check setup: hooks, port, version, queue |
+| `claudedash recover` | Summarize last session after `/clear` |
 
-Log quality results in `execution.log`:
+---
 
-```json
-{
-  "task_id": "F1-2",
-  "status": "DONE",
-  "timestamp": "2026-02-18T12:05:00Z",
-  "agent": "claude",
-  "meta": {
-    "file": "src/core/logParser.ts",
-    "quality": { "lint": true, "typecheck": true, "test": false }
-  }
-}
+## Sharing with Your Team
+
+By default claudedash listens on `127.0.0.1` only.
+
+```bash
+# Start with a token
+claudedash start --token mysecret123
+
+# Or via env
+CLAUDEDASH_TOKEN=mysecret123 claudedash start
 ```
 
-Select any task in Plan mode to see its quality check history with pass/fail badges. → [Quality Gates docs](docs/quality-gates.md)
+Team access: `http://your-host:4317?token=mysecret123`
+
+> **Tip:** Use a tunnel instead of exposing `--host 0.0.0.0`:
+> ```bash
+> claudedash start --token $(openssl rand -hex 16)
+> ngrok http 4317
+> ```
+
+---
+
+## Advanced Features
 
 ### Context Health
+Color-coded token usage per session — green → yellow → red at 65% / 75%.
+→ [Context Health docs](docs/context-health.md)
 
-See how much of Claude's context window each session is using, with color-coded warnings at 65% (warn) and 75% (critical).
+### Quality Gates
+Log `lint`, `typecheck`, `test` results per task via `meta.quality` in `execution.log`.
+See ✅/❌ inline in each card, with full timeline.
+→ [Quality Gates docs](docs/quality-gates.md)
 
-- Session cards show a compact `72%` indicator
-- Selected session shows a full progress bar in the token header
-- A header banner appears when any session crosses warn/critical level
-
-→ [Context Health docs](docs/context-health.md) | [Estimation methodology](docs/context-estimation.md)
-
-### Worktree Observability
-
-When running agents across multiple git worktrees in parallel, the new **Worktrees** tab shows:
-
-- Branch name and HEAD commit per worktree
-- Dirty/clean status (uncommitted changes)
-- Ahead/behind commits relative to upstream
-- Which agent tasks are running in each worktree
-
+### Worktrees
+Running agents across multiple git branches? The Worktrees tab maps sessions to branches by `cwd`, shows dirty/ahead/behind state, and lists which tasks are running where. Native support for `claude --worktree <name>` (creates `.claude/worktrees/<name>/`).
 → [Worktree docs](docs/worktrees.md)
+
+### MCP Server
+Claude can query its own dashboard:
+```bash
+claude mcp add claudedash -- npx -y claudedash@latest mcp
+```
+Tools: `get_queue`, `get_sessions`, `get_cost`, `get_history`, `log_task`, `create_task`, `register_agent`, `send_heartbeat`.
+
+---
 
 ## API
 
 | Endpoint | Description |
 |---|---|
-| `GET /health` | Status + available modes + `connectedClients` + `lastSessions` |
-| `GET /sessions` | All Claude Code sessions (includes `contextHealth`) |
-| `GET /sessions/:id` | Tasks for a session |
+| `GET /health` | Status, modes, connected clients |
+| `GET /sessions` | All sessions with context health |
+| `GET /sessions/:id/context` | Session JSONL summary |
 | `GET /events` | SSE stream |
 | `GET /snapshot` | Plan mode state |
-| `GET /quality-timeline` | Quality check events (filter with `?taskId=` or `?file=`) |
+| `GET /queue` | Computed task statuses |
 | `GET /worktrees` | Git worktrees with task associations |
-| `GET /claude-insights` | Claude usage report (sandboxed HTML) |
-| `POST /plan/task` | Add a task to queue.md |
-| `PATCH /plan/task/:id` | Update task status (DONE / BLOCKED / FAILED) |
+| `GET /billing-block` | Current 5h billing window |
+| `GET /cost` | Estimated cost by model |
+| `POST /log` | Log task result |
+| `POST /plan/task` | Add task to queue.md |
+| `POST /agent/register` | Register an agent |
+
+---
+
+## Stack
+
+TypeScript · Fastify · chokidar · SSE · Next.js 16 · Tailwind CSS · Vitest
+
+---
 
 ## Development
 
@@ -233,19 +240,18 @@ git clone https://github.com/yunusemrgrl/claudedash.git
 cd claudedash && npm install
 cd dashboard && npm install && cd ..
 
-npm run build        # Build core + dashboard
-npm test             # 165 tests
-npm run dev          # Dev server with watch
+npm run build    # Build core + dashboard
+npm test         # Run tests
+npm run dev      # Dev server with watch
 ```
 
-## Stack
-
-TypeScript, Fastify, chokidar, SSE, Next.js, Tailwind, Vitest.
+---
 
 ## Contributing
 
-PRs welcome. Open an issue first for anything beyond small fixes. See [CHANGELOG.md](CHANGELOG.md) for release history.
+PRs welcome. Open an issue first for anything beyond small fixes.
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-MIT
+MIT — not affiliated with Anthropic.

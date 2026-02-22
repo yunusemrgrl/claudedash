@@ -414,13 +414,7 @@ function initScreenshotTabs() {
 
       // Update slides
       slides.forEach(slide => {
-        const isActive = slide.dataset.slide === target;
-        slide.classList.toggle('sc-slide-active', isActive);
-        // Autoplay video when shown, pause when hidden
-        if (slide.tagName === 'VIDEO') {
-          if (isActive) { slide.play().catch(() => {}); }
-          else { slide.pause(); }
-        }
+        slide.classList.toggle('sc-slide-active', slide.dataset.slide === target);
       });
     });
   });

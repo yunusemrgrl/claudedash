@@ -105,7 +105,7 @@ export interface HealthResponse {
 }
 
 // Insights types
-export interface TimelineDataPoint {
+interface TimelineDataPoint {
   timestamp: string;
   completed: number;
   failed: number;

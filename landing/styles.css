@@ -873,7 +873,7 @@ code {
 .sc-img {
   width: 100%;
   border-radius: 0;
-  display: block;
+  /* display managed by .sc-slide / .sc-slide-active rules */
 }
 
 .sc-caption {
