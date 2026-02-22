@@ -12,6 +12,8 @@ coverage/
 
 # Internal documentation
 brief.md
+linkedin.md
+medium.md
 
 # Auto-generated files
 dashboard/next-env.d.ts
