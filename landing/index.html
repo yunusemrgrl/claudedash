@@ -388,11 +388,11 @@
             <!-- Tab switcher -->
             <div class="sc-tabs" id="sc-tabs">
               <button class="sc-tab sc-tab-active" data-tab="live">Live</button>
+              <button class="sc-tab" data-tab="kanban">Kanban</button>
               <button class="sc-tab" data-tab="queue">Queue</button>
+              <button class="sc-tab" data-tab="context">Context Health</button>
               <button class="sc-tab" data-tab="worktrees">Worktrees</button>
               <button class="sc-tab" data-tab="activity">Activity</button>
-              <button class="sc-tab" data-tab="config">Config</button>
-              <button class="sc-tab" data-tab="docs">Docs</button>
             </div>
 
             <div class="screenshot-chrome">
@@ -408,39 +408,39 @@
               <div class="sc-slides" id="sc-slides">
                 <img
                   src="assets/live.png"
-                  alt="claudedash Live view — session kanban with context health bars"
+                  alt="claudedash Live view — session Kanban with context health bars"
                   class="sc-img sc-slide sc-slide-active"
                   data-slide="live"
                 />
                 <img
+                  src="assets/kanban.png"
+                  alt="claudedash Kanban view — tasks across PENDING, IN PROGRESS, COMPLETED columns"
+                  class="sc-img sc-slide"
+                  data-slide="kanban"
+                />
+                <img
                   src="assets/queue.png"
-                  alt="claudedash Queue view — task planning with dependencies"
+                  alt="claudedash Queue view — plan mode task board with dependency graph"
                   class="sc-img sc-slide"
                   data-slide="queue"
                 />
                 <img
+                  src="assets/context-health.png"
+                  alt="claudedash Context Health — live token usage per session with color-coded warnings"
+                  class="sc-img sc-slide"
+                  data-slide="context"
+                />
+                <img
                   src="assets/worktrees.png"
-                  alt="claudedash Worktrees view — git worktree observability"
+                  alt="claudedash Worktrees view — parallel agents across git branches"
                   class="sc-img sc-slide"
                   data-slide="worktrees"
                 />
                 <img
-                  src="assets/activity.gif"
-                  alt="claudedash Activity view — tool analytics and prompt history"
+                  src="assets/activity.png"
+                  alt="claudedash Activity view — cost tracker and tool analytics per session"
                   class="sc-img sc-slide"
                   data-slide="activity"
-                />
-                <img
-                  src="assets/config.png"
-                  alt="claudedash Config view"
-                  class="sc-img sc-slide"
-                  data-slide="config"
-                />
-                <img
-                  src="assets/docs.png"
-                  alt="claudedash Docs view"
-                  class="sc-img sc-slide"
-                  data-slide="docs"
                 />
               </div>
             </div>
@@ -545,7 +545,7 @@
           <div class="wt-media" data-animate>
             <img
               src="assets/worktrees.png"
-              alt="claudedash Worktrees tab — git worktree observability with branch status"
+              alt="claudedash Worktrees tab — parallel agents across git branches with context health"
             />
           </div>
         </div>
