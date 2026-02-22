@@ -98,10 +98,10 @@
    data: {"type":"sessions"}\n\n
    ```
 
-4. **Dashboard receives**: The `useSessions` or `usePlanSnapshot` hook has an open `EventSource` connection to `/events/`. Its `onmessage` handler receives the event, checks the type, and calls the appropriate fetch function.
+4. **Dashboard receives**: A module-level singleton `EventSource` (managed by `useSSEEvents.ts`) holds the single `/events/` connection. All hooks subscribe via `useSSEEvents(handler)` — the handler checks the event type and triggers the appropriate fetch.
 
 5. **UI updates**: React re-renders with fresh data — typically within ~100ms of the file change.
 
-### Why two EventSource connections?
+### One shared EventSource connection
 
-`useSessions` and `usePlanSnapshot` each open their own `/events/` connection. This is intentional for simplicity: each hook is self-contained and doesn't need to coordinate with others. The overhead of two SSE connections is minimal (keep-alive pings every 30s). If this becomes a concern, a shared `useSSEContext` provider can be introduced without changing either hook's API.
+`useSessions`, `usePlanSnapshot`, and `useNotifications` all share a single `/events/` connection via a pub/sub singleton in `useSSEEvents.ts`. Each hook subscribes a handler; the singleton dispatches incoming events to all subscribers. This eliminates redundant keep-alive traffic and reduces browser connection overhead.

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync, readFileSync, appendFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, appendFileSync, writeFileSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import type { EventEmitter } from 'events';
 import { parseQueue, type QueueParseConfig } from '../../core/queueParser.js';
@@ -29,6 +29,9 @@ function readQueueParseConfig(planDir: string): QueueParseConfig | undefined {
 export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOptions): Promise<void> {
   const { claudeDir, planDir, emitter } = opts;
 
+  // mtime-based cache for /snapshot — invalidated when queue.md or execution.log changes
+  let snapshotCache: { queueMtime: number; logMtime: number; result: unknown } | null = null;
+
   fastify.get('/snapshot', async () => {
     if (!planDir) {
       return {
@@ -49,6 +52,13 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
         logErrors: [],
         meta: { generatedAt: new Date().toISOString(), totalTasks: 0 }
       };
+    }
+
+    // Return cached snapshot if neither queue.md nor execution.log has changed
+    const queueMtime = statSync(queuePath).mtimeMs;
+    const logMtime = existsSync(logPath) ? statSync(logPath).mtimeMs : 0;
+    if (snapshotCache && snapshotCache.queueMtime === queueMtime && snapshotCache.logMtime === logMtime) {
+      return snapshotCache.result;
     }
 
     const queueParseConfig = readQueueParseConfig(planDir);
@@ -80,12 +90,14 @@ export async function planRoutes(fastify: FastifyInstance, opts: PlanRouteOption
       };
     }
 
-    return {
+    const snapshotResult = {
       snapshot,
       queueErrors: [],
       logErrors: logResult.errors,
       meta: { generatedAt: new Date().toISOString(), totalTasks: queueResult.tasks.length }
     };
+    snapshotCache = { queueMtime, logMtime, result: snapshotResult };
+    return snapshotResult;
   });
 
   fastify.get('/insights', async () => {

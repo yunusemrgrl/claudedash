@@ -33,8 +33,14 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
   // Ring buffer of last 100 hook events
   const hookEvents: HookEvent[] = [];
 
+  // Cache for readSessions — invalidated by watcher on any session file change
+  let sessionsCache: ReturnType<typeof readSessions> | null = null;
+
   emitter.on('change', (event: WatchEvent) => {
-    if (event.type === 'sessions') lastSessions = new Date().toISOString();
+    if (event.type === 'sessions') {
+      lastSessions = new Date().toISOString();
+      sessionsCache = null; // invalidate on file change
+    }
     for (const send of sseClients) send(event);
   });
 
@@ -103,7 +109,8 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
       }
     }
 
-    const allSessions = readSessions(claudeDir);
+    if (!sessionsCache) sessionsCache = readSessions(claudeDir);
+    const allSessions = sessionsCache;
     const filtered = cutoffMs
       ? allSessions.filter(s => !s.updatedAt || new Date(s.updatedAt).getTime() >= cutoffMs)
       : allSessions;
@@ -117,8 +124,8 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
   });
 
   fastify.get<{ Params: { id: string }; Querystring: { model?: string } }>('/sessions/:id', async (request) => {
-    const sessions = readSessions(claudeDir);
-    const found = sessions.find(s => s.id === request.params.id);
+    if (!sessionsCache) sessionsCache = readSessions(claudeDir);
+    const found = sessionsCache.find(s => s.id === request.params.id);
     if (!found) return { session: null, error: 'Session not found' };
     const model = request.query.model;
     return { session: { ...found, contextHealth: buildContextHealth(found, model) } };
@@ -126,8 +133,8 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
 
   fastify.post<{ Params: { id: string } }>('/sessions/:id/resume-cmd', async (request, reply) => {
     const { id } = request.params;
-    const sessions = readSessions(claudeDir);
-    const found = sessions.find(s => s.id === id);
+    if (!sessionsCache) sessionsCache = readSessions(claudeDir);
+    const found = sessionsCache.find(s => s.id === id);
     if (!found) return reply.code(404).send({ error: 'Session not found' });
     return { command: `claude resume ${id}`, sessionId: id };
   });
