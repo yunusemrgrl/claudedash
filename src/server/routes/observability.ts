@@ -12,6 +12,13 @@ export interface ObservabilityRouteOptions {
 export async function observabilityRoutes(fastify: FastifyInstance, opts: ObservabilityRouteOptions): Promise<void> {
   const { claudeDir } = opts;
 
+  // ── Server-side caches ────────────────────────────────────────────────────
+  // /history: mtime-based — only re-parse history.jsonl when file changes
+  let historyCache: { mtime: number; result: unknown } | null = null;
+
+  // /billing-block: 60s TTL — scanning all project JSONLs is expensive
+  let billingCache: { expireAt: number; result: unknown } | null = null;
+
   // GET /usage — reads ~/.claude/stats-cache.json (written by Claude Code)
   fastify.get('/usage', async (_req, reply) => {
     const statsPath = join(claudeDir, 'stats-cache.json');
@@ -110,6 +117,12 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       const limit = Math.min(isNaN(limitParam) ? 50 : limitParam, 500);
       const offset = isNaN(offsetParam) ? 0 : Math.max(0, offsetParam);
 
+      // Return cached parse when file hasn't changed (offset 0 / default limit only)
+      const mtime = statSync(historyPath).mtimeMs;
+      if (historyCache && historyCache.mtime === mtime && offset === 0 && limit === 50) {
+        return historyCache.result;
+      }
+
       const raw = readFileSync(historyPath, 'utf8');
       const lines = raw.split('\n').filter(l => l.trim());
 
@@ -154,7 +167,9 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
         .slice(0, 10)
         .map(([path, count]) => ({ path, name: basename(path), count }));
 
-      return { prompts, topProjects, total: allEntries.length, offset, limit };
+      const result = { prompts, topProjects, total: allEntries.length, offset, limit };
+      if (offset === 0 && limit === 50) historyCache = { mtime, result };
+      return result;
     } catch {
       return reply.code(500).send({ error: 'Failed to read history.jsonl' });
     }
@@ -486,6 +501,9 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
   fastify.get('/billing-block', async () => {
     const projectsDir = join(claudeDir, 'projects');
     if (!existsSync(projectsDir)) return { active: false };
+    // Return cached result if still fresh (60s TTL)
+    const now = Date.now();
+    if (billingCache && billingCache.expireAt > now) return billingCache.result;
     try {
       const windowMs = 5 * 60 * 60 * 1000; // 5 hours
       const now = Date.now();
@@ -549,34 +567,36 @@ export async function observabilityRoutes(fastify: FastifyInstance, opts: Observ
       }
 
       const tokensUsed = cur_in + cur_out + cur_cC + cur_cR;
+      let billingResult: unknown;
       if (tokensUsed === 0) {
-        // Build last-block info from previous window if available
         const prevTokens = prev_in + prev_out + prev_cC + prev_cR;
         if (prevTokens > 0 && prevNewest) {
-          return {
+          billingResult = {
             active: false,
             lastBlockEndedAt: new Date(prevNewest + windowMs).toISOString(),
             lastBlockStartedAt: prevOldest ? new Date(prevOldest).toISOString() : undefined,
             lastBlockCostUSD: calcCost(prev_in, prev_out, prev_cR, prev_cC),
           };
+        } else {
+          billingResult = { active: false };
         }
-        return { active: false };
+      } else {
+        const blockStart = curOldest ?? now;
+        const minutesElapsed = Math.round((now - blockStart) / 60000);
+        const minutesRemaining = Math.max(0, 300 - minutesElapsed);
+        billingResult = {
+          active: true,
+          blockStart: new Date(blockStart).toISOString(),
+          blockEnd: new Date(blockStart + windowMs).toISOString(),
+          minutesElapsed,
+          minutesRemaining,
+          tokensUsed,
+          breakdown: { input: cur_in, output: cur_out, cacheCreate: cur_cC, cacheRead: cur_cR },
+          estimatedCostUSD: calcCost(cur_in, cur_out, cur_cR, cur_cC),
+        };
       }
-
-      const blockStart = curOldest ?? now;
-      const minutesElapsed = Math.round((now - blockStart) / 60000);
-      const minutesRemaining = Math.max(0, 300 - minutesElapsed);
-
-      return {
-        active: true,
-        blockStart: new Date(blockStart).toISOString(),
-        blockEnd: new Date(blockStart + windowMs).toISOString(),
-        minutesElapsed,
-        minutesRemaining,
-        tokensUsed,
-        breakdown: { input: cur_in, output: cur_out, cacheCreate: cur_cC, cacheRead: cur_cR },
-        estimatedCostUSD: calcCost(cur_in, cur_out, cur_cR, cur_cC),
-      };
+      billingCache = { expireAt: now + 60_000, result: billingResult };
+      return billingResult;
     } catch {
       return { active: false };
     }
