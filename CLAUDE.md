@@ -36,42 +36,7 @@ If any step fails: fix the error first, then re-run from the beginning. Never co
 - After modifying authentication-related logic, audit ALL screens, tabs, and modules that perform API calls.
 - Ensure coverage consistency across the entire authenticated surface — not only the screen that exposed the issue.
 
-# Agent Scope Integration
+## Task Tracking
 
-## Task Tracking (MANDATORY)
-
-You MUST use the TodoWrite tool to track your work. This is not optional.
-The user monitors your progress via a live dashboard that reads TodoWrite output.
-
-Rules:
-
-- At the START of any multi-step task, create a todo list with all steps.
-- Mark each task as `in_progress` BEFORE you start working on it.
-- Mark each task as `completed` IMMEDIATELY after finishing it.
-- Keep exactly ONE task as `in_progress` at any time.
-- Update the todo list as you discover new subtasks.
-
-If you skip TodoWrite, the user cannot see what you are doing.
-
-## Plan Mode (if .claudedash/queue.md exists)
-
-Follow `.claudedash/workflow.md` for structured task execution.
-Tasks are defined in `.claudedash/queue.md`.
-Log progress to `.claudedash/execution.log`.
-
-Log format (append one JSON line per task):
-
-```json
-{
-  "task_id": "S1-T1",
-  "status": "DONE",
-  "timestamp": "2026-01-15T10:30:00Z",
-  "agent": "claude"
-}
-```
-
-Status values: `DONE`, `FAILED`, `BLOCKED` (requires `reason` field)
-
-## Dashboard
-
-Run `npx claudedash start` to view progress.
+If `.claudedash/queue.md` exists, follow `.claudedash/workflow.md` for structured task execution.
+Log progress to `.claudedash/execution.log`. See `.claudedash/CLAUDE.md` for full details.
