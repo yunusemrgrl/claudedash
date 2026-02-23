@@ -13,6 +13,9 @@ coverage/
 .claudedash/queue.md
 .claudedash/execution.log
 .claudedash/config.json
+.claudedash/context-snapshot.json
+.claudedash/snapshots/
+.claudedash/compact-state.md
 
 # Internal documentation
 brief.md

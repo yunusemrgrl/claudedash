@@ -176,6 +176,31 @@ export interface ContextHealth {
   estimationMethod?: string;       // How percentage was calculated
 }
 
+// Context Snapshot types (used by `claudedash snapshot` / `claudedash recover`)
+export interface ContextSnapshot {
+  schemaVersion: 1;
+  capturedAt: string;       // ISO timestamp
+  cwd: string;
+  focus?: string;           // Optional --focus message
+  git: {
+    branch: string;
+    dirty: boolean;
+    changedFiles: string[]; // max 20
+    recentCommits: string[]; // max 5, format: "abc1234 commit msg"
+  };
+  tasks: {
+    inProgress: { id: string; description: string } | null;
+    ready: { id: string; description: string }[];  // max 5
+    doneIds: string[];      // last 10 DONE task IDs
+    failedIds: string[];
+    blockedIds: string[];
+    summary: { total: number; done: number; ready: number; failed: number; blocked: number };
+  };
+  execution: {
+    lastEntries: { task_id: string; status: string; timestamp: string; reason?: string }[];
+  };
+}
+
 // Worktree Observability types
 export interface WorktreeState {
   path: string;           // Absolute path to worktree

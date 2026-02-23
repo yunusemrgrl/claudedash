@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync, statSy
 import { join } from 'path';
 import { execFile } from 'child_process';
 import { startServer } from './server/server.js';
+import { captureContextSnapshot, writeContextSnapshot, readContextSnapshot, formatRecoveryOutput } from './core/contextCapture.js';
 
 const program = new Command();
 
@@ -627,16 +628,55 @@ program
   });
 
 program
+  .command('snapshot')
+  .description('Save current project state to .claudedash/context-snapshot.json')
+  .option('--focus <message>', 'Brief description of what was being worked on')
+  .action(async (opts) => {
+    try {
+      const snapshot = await captureContextSnapshot({ focus: opts.focus as string | undefined });
+      const claudedashDir = join(process.cwd(), '.claudedash');
+      writeContextSnapshot(snapshot, claudedashDir);
+
+      const { tasks, git } = snapshot;
+      console.log('\n✅ Context snapshot saved');
+      console.log(`   Branch  : ${git.branch}${git.dirty ? ' (dirty)' : ''}`);
+      console.log(`   Tasks   : ${tasks.summary.done}/${tasks.summary.total} done, ${tasks.summary.ready} ready`);
+      if (tasks.inProgress) {
+        console.log(`   Next    : [${tasks.inProgress.id}] ${tasks.inProgress.description}`);
+      }
+      if (opts.focus) {
+        console.log(`   Focus   : ${opts.focus as string}`);
+      }
+      console.log(`\n   Saved to .claudedash/context-snapshot.json\n`);
+    } catch (err) {
+      console.error('❌ Snapshot failed:', (err as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
   .command('recover')
   .description('Summarize the last Claude Code session after /clear')
   .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
   .action((opts) => {
+    // Check for a saved context snapshot first
+    const claudedashDir = join(process.cwd(), '.claudedash');
+    const snapshot = readContextSnapshot(claudedashDir);
+    if (snapshot) {
+      console.log(formatRecoveryOutput(snapshot));
+    }
+
     const claudeDir = opts.claudeDir;
     const projectsDir = join(claudeDir, 'projects');
 
     if (!existsSync(projectsDir)) {
-      console.error('❌ No projects directory found at', projectsDir);
-      process.exit(1);
+      if (!snapshot) {
+        console.error('❌ No projects directory found at', projectsDir);
+        process.exit(1);
+      }
+      // Snapshot was shown, exit gracefully
+      console.log('Run `claudedash start` to view the live dashboard.\n');
+      return;
     }
 
     // Map cwd to Claude project dir name (slashes → hyphens, no leading -)
