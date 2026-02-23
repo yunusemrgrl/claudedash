@@ -399,9 +399,20 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Screenshot tab gallery ──────────────────────────────
+const SC_CAPTIONS = {
+  live:      'Live session Kanban — task status, context health, and tool events via SSE',
+  kanban:    'Kanban board — drag-and-drop tasks across PENDING → IN PROGRESS → DONE columns',
+  queue:     'Plan Mode queue — dependency graph, acceptance criteria, and slice-based execution',
+  context:   'Context Health — live token usage per session with color-coded warnings at 80 % / 95 %',
+  worktrees: 'Worktrees — parallel agents across git branches, dirty state, and ahead/behind counts',
+  activity:  'Activity — tool usage timeline, prompt history, cost breakdown, and AI session quality',
+  snapshots: 'Snapshots — roll back code and Claude context together with one git commit hash',
+};
+
 function initScreenshotTabs() {
   const tabs = $$('#sc-tabs .sc-tab');
   const slides = $$('#sc-slides .sc-slide');
+  const captionEl = document.getElementById('sc-caption-text');
   if (!tabs.length) return;
 
   tabs.forEach(tab => {
@@ -416,6 +427,9 @@ function initScreenshotTabs() {
       slides.forEach(slide => {
         slide.classList.toggle('sc-slide-active', slide.dataset.slide === target);
       });
+
+      // Update caption
+      if (captionEl && SC_CAPTIONS[target]) captionEl.textContent = SC_CAPTIONS[target];
     });
   });
 }

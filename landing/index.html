@@ -394,6 +394,7 @@
               <button class="sc-tab" data-tab="context">Context Health</button>
               <button class="sc-tab" data-tab="worktrees">Worktrees</button>
               <button class="sc-tab" data-tab="activity">Activity</button>
+              <button class="sc-tab" data-tab="snapshots">Snapshots</button>
             </div>
 
             <div class="screenshot-chrome">
@@ -443,11 +444,17 @@
                   class="sc-img sc-slide"
                   data-slide="activity"
                 />
+                <img
+                  src="assets/snapshots.png"
+                  alt="claudedash Snapshots — context rollback tied to git commits"
+                  class="sc-img sc-slide"
+                  data-slide="snapshots"
+                />
               </div>
             </div>
             <div class="sc-caption">
               <span class="sc-dot"></span>
-              Updates in real-time via SSE — typically within ~100ms of every file write
+              <span id="sc-caption-text">Live session Kanban — task status, context health, and tool events via SSE</span>
             </div>
           </div>
         </div>
