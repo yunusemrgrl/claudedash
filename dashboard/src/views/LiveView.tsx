@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, X } from "lucide-react";
 import type { ClaudeSession, ClaudeTask, TokenUsage, QueueSummary, AgentRecord, HistoryPrompt, BillingBlock } from "@/types";
 import { ContextHealthMini, ContextHealthWidget } from "@/components/ContextHealthWidget";
 import { TypingPrompt } from "@/components/TypingPrompt";
@@ -180,6 +180,10 @@ export function LiveView({
     setResumeToast(command);
     setTimeout(() => setResumeToast(null), 3000);
   };
+
+  const handleDismissTask = useCallback((sessionId: string, taskId: string) => {
+    void fetch(`/sessions/${sessionId}/tasks/${taskId}`, { method: "DELETE" }).catch(() => {});
+  }, []);
 
   // Aggregate context health across sessions that have data
   const sessionsWithHealth = sessions.filter((s) => s.contextHealth != null);
@@ -590,6 +594,8 @@ export function LiveView({
                   statusColor="chart-1"
                   selectedTask={selectedTask}
                   setSelectedTask={setSelectedTask}
+                  sessionId={selectedSession?.id ?? ""}
+                  onDismiss={(taskId) => handleDismissTask(selectedSession?.id ?? "", taskId)}
                 />
                 <KanbanColumn
                   title="In Progress"
@@ -598,6 +604,8 @@ export function LiveView({
                   statusColor="chart-4"
                   selectedTask={selectedTask}
                   setSelectedTask={setSelectedTask}
+                  sessionId={selectedSession?.id ?? ""}
+                  onDismiss={(taskId) => handleDismissTask(selectedSession?.id ?? "", taskId)}
                 />
                 <KanbanColumn
                   title="Completed"
@@ -606,6 +614,8 @@ export function LiveView({
                   statusColor="chart-2"
                   selectedTask={selectedTask}
                   setSelectedTask={setSelectedTask}
+                  sessionId={selectedSession?.id ?? ""}
+                  onDismiss={(taskId) => handleDismissTask(selectedSession?.id ?? "", taskId)}
                 />
               </div>
 
@@ -742,6 +752,8 @@ function KanbanColumn({
   statusColor,
   selectedTask,
   setSelectedTask,
+  sessionId,
+  onDismiss,
 }: {
   title: string;
   count: number;
@@ -749,6 +761,8 @@ function KanbanColumn({
   statusColor: string;
   selectedTask: ClaudeTask | null;
   setSelectedTask: (t: ClaudeTask) => void;
+  sessionId: string;
+  onDismiss: (taskId: string) => void;
 }) {
   return (
     <div className="flex-1 min-w-[250px] flex flex-col">
@@ -764,39 +778,54 @@ function KanbanColumn({
       <ScrollArea className="flex-1">
         <div className="space-y-2 pr-1">
           {tasks.map((task) => (
-            <button
-              key={task.id}
-              onClick={() => setSelectedTask(task)}
-              className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                selectedTask?.id === task.id
-                  ? "bg-accent border-ring"
-                  : "bg-card border-border hover:bg-accent/50"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  #{task.id}
-                </span>
-              </div>
-              <p className="text-sm text-foreground line-clamp-2 mb-1">
-                {task.subject}
-              </p>
-              {task.status === "in_progress" && task.activeForm && (
-                <p className="text-xs text-chart-4 italic truncate">
-                  {task.activeForm}
-                </p>
-              )}
-              {task.blockedBy.length > 0 && (
-                <div className="flex items-center gap-1 mt-1.5">
-                  <span className="text-[10px] text-chart-3">
-                    Blocked by #{task.blockedBy[0]}
-                    {task.blockedBy.length > 1
-                      ? ` +${task.blockedBy.length - 1}`
-                      : ""}
+            <div key={task.id} className="group relative">
+              <button
+                onClick={() => setSelectedTask(task)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  selectedTask?.id === task.id
+                    ? "bg-accent border-ring"
+                    : "bg-card border-border hover:bg-accent/50"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    #{task.id}
                   </span>
+                  {task.isStale && (
+                    <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-muted text-muted-foreground/70 uppercase tracking-wide">
+                      stale
+                    </span>
+                  )}
                 </div>
+                <p className="text-sm text-foreground line-clamp-2 mb-1">
+                  {task.subject}
+                </p>
+                {task.status === "in_progress" && task.activeForm && (
+                  <p className="text-xs text-chart-4 italic truncate">
+                    {task.activeForm}
+                  </p>
+                )}
+                {task.blockedBy.length > 0 && (
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className="text-[10px] text-chart-3">
+                      Blocked by #{task.blockedBy[0]}
+                      {task.blockedBy.length > 1
+                        ? ` +${task.blockedBy.length - 1}`
+                        : ""}
+                    </span>
+                  </div>
+                )}
+              </button>
+              {task.isStale && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDismiss(task.id); }}
+                  title="Dismiss stale task"
+                  className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted text-muted-foreground/60 hover:text-foreground"
+                >
+                  <X className="size-3" />
+                </button>
               )}
-            </button>
+            </div>
           ))}
         </div>
       </ScrollArea>

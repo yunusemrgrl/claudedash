@@ -25,6 +25,27 @@ export interface HookEvent {
   [key: string]: unknown;
 }
 
+const STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function loadDismissed(claudeDir: string): Set<string> {
+  const filePath = join(claudeDir, 'claudedash-dismissed.json');
+  try {
+    if (existsSync(filePath)) {
+      const raw = readFileSync(filePath, 'utf-8');
+      const arr = JSON.parse(raw) as string[];
+      return new Set(Array.isArray(arr) ? arr : []);
+    }
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function saveDismissed(claudeDir: string, dismissed: Set<string>): void {
+  const filePath = join(claudeDir, 'claudedash-dismissed.json');
+  try {
+    writeFileSync(filePath, JSON.stringify([...dismissed], null, 2));
+  } catch { /* ignore */ }
+}
+
 export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOptions): Promise<void> {
   const { claudeDir, planDir, emitter } = opts;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,6 +53,8 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
   let lastSessions: string | null = null;
   // Ring buffer of last 100 hook events
   const hookEvents: HookEvent[] = [];
+  // Dismissed task keys: "sessionId/taskId"
+  const dismissed = loadDismissed(claudeDir);
 
   // Cache for readSessions — invalidated by watcher on any session file change
   let sessionsCache: ReturnType<typeof readSessions> | null = null;
@@ -115,11 +138,23 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
       ? allSessions.filter(s => !s.updatedAt || new Date(s.updatedAt).getTime() >= cutoffMs)
       : allSessions;
 
-    const sessions = filtered.map(s => ({
-      ...s,
-      contextHealth: buildContextHealth(s, model),
-      ...readSessionMeta(s.id),
-    }));
+    const now = Date.now();
+    const sessions = filtered.map(s => {
+      const sessionAgeMs = now - new Date(s.updatedAt).getTime();
+      const isSessionStale = sessionAgeMs > STALE_MS;
+      const tasks = s.tasks
+        .filter(t => !dismissed.has(`${s.id}/${t.id}`))
+        .map(t => ({
+          ...t,
+          isStale: t.status === 'in_progress' && isSessionStale ? true : undefined,
+        }));
+      return {
+        ...s,
+        tasks,
+        contextHealth: buildContextHealth(s, model),
+        ...readSessionMeta(s.id),
+      };
+    });
     return { sessions, total: allSessions.length, filtered: filtered.length };
   });
 
@@ -219,6 +254,20 @@ export async function liveRoutes(fastify: FastifyInstance, opts: LiveRouteOption
       return reply.code(500).send({ error: 'Failed to parse session JSONL' });
     }
   });
+
+  // DELETE /sessions/:sessionId/tasks/:taskId — dismiss a stale task from the Kanban
+  fastify.delete<{ Params: { sessionId: string; taskId: string } }>(
+    '/sessions/:sessionId/tasks/:taskId',
+    async (request, reply) => {
+      const { sessionId, taskId } = request.params;
+      const key = `${sessionId}/${taskId}`;
+      dismissed.add(key);
+      saveDismissed(claudeDir, dismissed);
+      sessionsCache = null;
+      for (const send of sseClients) send({ type: 'sessions', timestamp: new Date().toISOString() });
+      return reply.send({ ok: true });
+    }
+  );
 
   // POST /hook — receives Claude Code hook events, fans out via SSE, stores in ring buffer
   fastify.post<{ Body: Record<string, unknown> }>('/hook', async (request) => {

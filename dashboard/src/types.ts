@@ -65,6 +65,7 @@ export interface ClaudeTask {
   status: ClaudeTaskStatus;
   blocks: string[];
   blockedBy: string[];
+  isStale?: boolean;
 }
 
 export interface TokenUsage {
