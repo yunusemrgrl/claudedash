@@ -9,6 +9,7 @@ export function getLatestSnapshot(): SnapshotResponse | null { return _latestSna
 
 export function usePlanSnapshot() {
   const [data, setData] = useState<SnapshotResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchSnapshot = useCallback(async () => {
     try {
@@ -19,6 +20,8 @@ export function usePlanSnapshot() {
       setData(result);
     } catch {
       // ignore
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -30,5 +33,5 @@ export function usePlanSnapshot() {
     if (data.type === "plan") void fetchSnapshot();
   });
 
-  return { data, refresh: fetchSnapshot };
+  return { data, loading, refresh: fetchSnapshot };
 }

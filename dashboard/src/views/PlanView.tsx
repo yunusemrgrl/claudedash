@@ -340,7 +340,7 @@ export function PlanView({
   searchQuery: string;
   sidebarCollapsed: boolean;
 }) {
-  const { data, refresh } = usePlanSnapshot();
+  const { data, loading, refresh } = usePlanSnapshot();
   const [selectedTask, setSelectedTask] = useState<ComputedTask | null>(null);
   const [expandedSlices, setExpandedSlices] = useState<Set<string>>(new Set());
   const [qualityEvents, setQualityEvents] = useState<QualityEvent[]>([]);
@@ -438,6 +438,10 @@ export function PlanView({
       return next;
     });
   };
+
+  if (loading) {
+    return <div className="flex-1" />;
+  }
 
   if (!data || !data.snapshot) {
     return (
