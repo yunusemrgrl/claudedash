@@ -551,6 +551,61 @@
         </div>
       </section>
 
+      <!-- ─────────────── MCP SERVER ─────────────── -->
+      <section class="mcp-section">
+        <div class="container mcp-grid">
+          <div class="mcp-media" data-animate>
+            <div class="mcp-terminal">
+              <div class="mcp-term-bar">
+                <div class="term-dots"><span></span><span></span><span></span></div>
+                <span class="mcp-term-title">Claude Code — MCP query</span>
+              </div>
+              <div class="mcp-term-body">
+                <div class="mcp-line">
+                  <span class="mcp-prompt">❯</span>
+                  <span class="mcp-cmd">claude mcp add claudedash -- npx -y claudedash@latest mcp</span>
+                </div>
+                <div class="mcp-line mcp-ok">✓ MCP server "claudedash" added</div>
+                <div class="mcp-spacer"></div>
+                <div class="mcp-line mcp-comment"># Claude can now query its own dashboard</div>
+                <div class="mcp-spacer"></div>
+                <div class="mcp-line">
+                  <span class="mcp-label">You →</span>
+                  <span class="mcp-user">What tasks are left in the queue?</span>
+                </div>
+                <div class="mcp-spacer"></div>
+                <div class="mcp-line">
+                  <span class="mcp-label mcp-tool-call">tool: get_queue</span>
+                </div>
+                <div class="mcp-line mcp-result">→ 8 READY · 7 DONE · 1 BLOCKED</div>
+                <div class="mcp-spacer"></div>
+                <div class="mcp-line">
+                  <span class="mcp-label">Claude →</span>
+                  <span class="mcp-assistant">8 tasks are ready to start. S4-T3 is blocked on S4-T2. Would you like me to start S2-T4?</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mcp-copy" data-animate>
+            <div class="section-eyebrow">MCP Server</div>
+            <h2>Claude can query<br />its own dashboard.</h2>
+            <p>
+              Add claudedash as an MCP server and your agent gains full self-awareness:
+              what tasks are queued, how much context is left, what it's spent today.
+              The loop closes.
+            </p>
+            <div class="mcp-tools">
+              <div class="mcp-tool"><code>get_queue</code><span>task list with READY/BLOCKED status</span></div>
+              <div class="mcp-tool"><code>get_sessions</code><span>active sessions + context health</span></div>
+              <div class="mcp-tool"><code>get_cost</code><span>today's spend by model</span></div>
+              <div class="mcp-tool"><code>log_task</code><span>write DONE/BLOCKED to execution.log</span></div>
+              <div class="mcp-tool"><code>create_task</code><span>add new task to queue.md</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ─────────────── FINAL CTA ─────────────── -->
       <section class="final-cta">
         <div class="container">

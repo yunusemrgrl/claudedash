@@ -1085,6 +1085,136 @@ code {
   box-shadow: var(--shadow-lg);
 }
 
+/* ── MCP SERVER ── */
+.mcp-section {
+  padding: 80px 0 100px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.mcp-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 72px;
+  align-items: center;
+}
+
+.mcp-terminal {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.mcp-term-bar {
+  height: 40px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+}
+
+.mcp-term-title {
+  font-size: 0.72rem;
+  color: #8b949e;
+  font-family: var(--mono);
+}
+
+.mcp-term-body {
+  padding: 20px 22px;
+  font-family: var(--mono);
+}
+
+.mcp-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  flex-wrap: wrap;
+}
+
+.mcp-prompt { color: var(--cyan); }
+.mcp-cmd { color: #e6edf3; }
+.mcp-ok { color: #3fb950; padding-left: 4px; }
+.mcp-comment { color: #8b949e; padding-left: 4px; }
+.mcp-spacer { height: 6px; }
+
+.mcp-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8b949e;
+  min-width: 62px;
+  flex-shrink: 0;
+}
+
+.mcp-tool-call {
+  color: var(--cyan);
+  background: rgba(0, 245, 255, 0.08);
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  border-radius: 4px;
+  padding: 1px 8px;
+  min-width: auto;
+}
+
+.mcp-result {
+  color: #a78bfa;
+  padding-left: 4px;
+  font-size: 0.8rem;
+}
+
+.mcp-user { color: #e6edf3; }
+.mcp-assistant { color: #e6edf3; max-width: 380px; }
+
+.mcp-copy h2 {
+  font-family: var(--mono);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.25;
+}
+
+.mcp-copy p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+.mcp-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mcp-tool {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.mcp-tool code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--cyan);
+  background: rgba(0, 245, 255, 0.06);
+  border: 1px solid rgba(0, 245, 255, 0.18);
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  min-width: 140px;
+  text-align: center;
+}
+
+.mcp-tool span {
+  color: var(--text-muted);
+  font-size: 0.83rem;
+}
+
 /* ── FINAL CTA ── */
 .final-cta {
   padding: 80px 0 100px;
@@ -1224,6 +1354,11 @@ code {
   }
 
   .wt-media { order: -1; }
+
+  .mcp-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
 }
 
 @media (max-width: 700px) {
