@@ -869,6 +869,42 @@ program
   });
 
 program
+  .command('upgrade')
+  .description('Upgrade claudedash to the latest version')
+  .action(() => {
+    const current = '1.1.26';
+    console.log(`\nclaudedash v${current} → checking for updates...\n`);
+
+    // Detect how claudedash was installed (global npm prefix)
+    execFile('npm', ['show', 'claudedash', 'version'], (err, stdout) => {
+      if (err) {
+        console.error('❌ Could not fetch latest version from npm:', err.message);
+        process.exit(1);
+      }
+      const latest = stdout.trim();
+      if (latest === current) {
+        console.log(`✓ Already on latest (v${current})\n`);
+        return;
+      }
+      console.log(`  Latest : v${latest}`);
+      console.log(`  Current: v${current}`);
+      console.log(`\n  Installing...\n`);
+
+      execFile('npm', ['install', '-g', `claudedash@${latest}`], (installErr, _out, stderr) => {
+        if (installErr) {
+          // Likely a permission error — suggest sudo or npx
+          console.error('❌ Install failed:', stderr.trim() || installErr.message);
+          console.log('\nTry one of:');
+          console.log(`  sudo npm install -g claudedash@${latest}`);
+          console.log(`  npx claudedash@${latest} start   (no install needed)`);
+          process.exit(1);
+        }
+        console.log(`✅ Upgraded to v${latest}\n`);
+      });
+    });
+  });
+
+program
   .command('doctor')
   .description('Check claudedash environment and configuration')
   .option('--claude-dir <path>', 'Path to Claude directory', join(process.env.HOME || '~', '.claude'))
