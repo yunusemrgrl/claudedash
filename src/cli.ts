@@ -796,7 +796,7 @@ program
       if (nextTask) console.log(`   ➡  Next task    : ${nextTask}`);
     }
 
-    console.log('\n─'.repeat(50));
+    console.log('─'.repeat(50));
     console.log('Run `claudedash start` to view the live dashboard.\n');
   });
 
