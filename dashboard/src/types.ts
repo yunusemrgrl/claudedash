@@ -343,9 +343,6 @@ export interface QueueSummary {
   ready: number;
 }
 
-export interface AgentsResponse {
-  agents: AgentRecord[];
-}
 
 export interface QueueResponse {
   tasks: {
